@@ -37,25 +37,26 @@ export function GuesserView() {
 
   const onAsk = () => {
     if (!currentQuestion) {
-      toast.error("No suggested question right now.")
+      toast.error("Nu există o întrebare sugerată acum.")
       return
     }
     if (!selectedPlayerId) {
-      toast.error("Pick a player to ask first.")
+      toast.error("Alege întâi un jucător.")
       return
     }
+    const player = room.players.find((p) => p.id === selectedPlayerId)
     askPlayer(currentQuestion.text, selectedPlayerId)
     skipQuestion()
     setSelectedPlayerId(null)
+    toast(`${player?.name ?? "Jucătorul"} răspunde verbal.`)
   }
 
   const onSubmitGuess = () => {
     if (guess.trim().length < 2) {
-      toast.error("Type your final guess before submitting.")
+      toast.error("Scrie verbul ghicit înainte de a trimite.")
       return
     }
     setSubmitting(true)
-    // Brief delay to let the UI feel responsive (would be a real network call).
     setTimeout(() => {
       submitGuess(guess.trim())
       setSubmitting(false)
@@ -67,8 +68,8 @@ export function GuesserView() {
       <section className="space-y-5">
         <GameStatusBanner
           viewAs="guesser"
-          title="You are the Guesser"
-          subtitle="Ask each player questions and guess the secret word. You'll never see the word itself."
+          title="Tu ești Ghicitorul"
+          subtitle="Pune întrebări jucătorilor și ghicește verbul secret. Verbul real este înlocuit peste tot cu „a tipota”. Ascultă răspunsurile verbale ca să-ți dai seama."
         />
 
         <QuestionCard

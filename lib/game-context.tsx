@@ -20,9 +20,9 @@ import type {
 } from "./types"
 import {
   generateRoomCode,
+  isCorrectVerbGuess,
   makeMockPlayer,
   makeQuestionItems,
-  simulateAnswer,
 } from "./mock-data"
 
 // ---------- State shape ----------
@@ -73,7 +73,7 @@ type Action =
   | { type: "MARK_QUESTION_USED"; payload: { questionId: string } }
   | {
       type: "ASK_PLAYER"
-      payload: { question: string; toPlayerId: string; word: string }
+      payload: { question: string; toPlayerId: string }
     }
   | { type: "SUBMIT_GUESS"; payload: { guess: string } }
   | { type: "NEW_ROUND" }
@@ -228,13 +228,12 @@ function reducer(state: GameState, action: Action): GameState {
     case "ASK_PLAYER": {
       if (!state.room?.currentRound) return state
       const round = state.room.currentRound
-      // In demo mode we synthesize the answer locally.
-      const answer = simulateAnswer(action.payload.question, action.payload.word)
+      // Players answer out loud in real life — we just log the question
+      // and which player it was addressed to.
       const entry: AnswerEntry = {
         id: `a_${Math.random().toString(36).slice(2, 9)}`,
         question: action.payload.question,
         toPlayerId: action.payload.toPlayerId,
-        answer,
         createdAt: Date.now(),
       }
       return {
@@ -249,8 +248,8 @@ function reducer(state: GameState, action: Action): GameState {
     case "SUBMIT_GUESS": {
       if (!state.room?.currentRound) return state
       const round = state.room.currentRound
-      const won =
-        action.payload.guess.trim().toLowerCase() === round.word.toLowerCase()
+      // Lenient match: accept the verb with or without the "a " particle.
+      const won = isCorrectVerbGuess(action.payload.guess, round.word)
       const updatedRound: Round = {
         ...round,
         finalGuess: action.payload.guess,
@@ -399,11 +398,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [],
   )
   const askPlayer = useCallback(
-    (question: string, toPlayerId: string) => {
-      const word = state.room?.currentRound?.word ?? ""
-      dispatch({ type: "ASK_PLAYER", payload: { question, toPlayerId, word } })
-    },
-    [state.room?.currentRound?.word],
+    (question: string, toPlayerId: string) =>
+      dispatch({ type: "ASK_PLAYER", payload: { question, toPlayerId } }),
+    [],
   )
   const submitGuess = useCallback(
     (guess: string) => dispatch({ type: "SUBMIT_GUESS", payload: { guess } }),

@@ -31,8 +31,7 @@ export interface AnswerEntry {
   question: string
   // The id of the player it was directed to
   toPlayerId: string
-  // The answer (free text from the player; in mock mode it can be auto-simulated)
-  answer: string
+  // Players answer verbally (out loud) — no written answer is stored.
   createdAt: number
 }
 

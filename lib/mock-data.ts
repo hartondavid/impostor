@@ -39,59 +39,72 @@ export function makeMockPlayer(
   }
 }
 
-// Fallback word + question set used when Gemini is unavailable.
-// Keeps the game playable in offline/demo mode.
+// Fallback word + question set used when Gemini is unavailable. Words are
+// Romanian verbs (acțiuni). The verb itself is replaced with conjugated
+// forms of the codename "a tipota" inside each question.
 export const FALLBACK_WORDS: Array<{
   word: string
   definition: string
   questions: string[]
 }> = [
   {
-    word: "lighthouse",
-    definition: "A tall structure on the coast that emits light to guide ships.",
+    word: "a alerga",
+    definition: "O activitate fizică în care te deplasezi rapid pe jos.",
     questions: [
-      "Is it found near the ocean?",
-      "Does it provide guidance or direction?",
-      "Is it usually tall and cylindrical?",
-      "Does it produce light?",
-      "Is it often associated with sailors or ships?",
-      "Can it be a tourist attraction?",
+      "Îți place să tipotezi?",
+      "Tipotezi des în timpul săptămânii?",
+      "Ai tipotat ieri?",
+      "Tipotezi singur sau cu prietenii?",
+      "Ai tipota și pe ploaie?",
+      "De ce tipotezi de obicei?",
     ],
   },
   {
-    word: "telescope",
-    definition: "An instrument used to observe distant objects, especially in space.",
+    word: "a dansa",
+    definition: "Te miști în ritmul muzicii, de unul singur sau cu altcineva.",
     questions: [
-      "Is it used to look at something far away?",
-      "Is it commonly used at night?",
-      "Does it involve lenses or mirrors?",
-      "Is it associated with science or astronomy?",
-      "Can it be handheld or mounted?",
-      "Has it been used for centuries?",
+      "Tipotezi când auzi muzică?",
+      "Ai tipotat la o nuntă vreodată?",
+      "Tipotezi mai bine singur sau în pereche?",
+      "Ai vrea să înveți să tipotezi mai bine?",
+      "Tipotezi și acasă, fără public?",
+      "Tipotezi pe orice gen de muzică?",
     ],
   },
   {
-    word: "volcano",
-    definition: "A mountain or hill with a vent through which lava and gases erupt.",
+    word: "a găti",
+    definition: "Pregătești mâncare folosind ingrediente, foc și diverse ustensile.",
     questions: [
-      "Is it a natural geological feature?",
-      "Can it be dangerous?",
-      "Does it involve heat?",
-      "Is it usually shaped like a mountain?",
-      "Has it shaped islands and continents?",
-      "Are there active examples around the world?",
+      "Îți place să tipotezi acasă?",
+      "Ai tipotat azi?",
+      "Tipotezi pentru tine sau pentru alții?",
+      "Tipotezi după rețete sau improvizezi?",
+      "Cât de des tipotezi într-o săptămână?",
+      "Ai tipota pentru o cină romantică?",
     ],
   },
   {
-    word: "compass",
-    definition: "An instrument with a magnetized needle that shows direction.",
+    word: "a citi",
+    definition: "Parcurgi un text pentru a înțelege ideile autorului.",
     questions: [
-      "Is it a small handheld tool?",
-      "Does it help you find your way?",
-      "Does it use magnetism?",
-      "Is it useful for hikers or sailors?",
-      "Does it always point in a specific direction?",
-      "Has it been used for navigation for centuries?",
+      "Tipotezi în pat seara?",
+      "Ai tipotat ceva interesant săptămâna asta?",
+      "Tipotezi pe hârtie sau pe ecran?",
+      "Tipotezi în liniște sau cu muzică?",
+      "Ai tipotat vreodată o noapte întreagă?",
+      "Tipotezi și ficțiune, și non-ficțiune?",
+    ],
+  },
+  {
+    word: "a cânta",
+    definition: "Produci sunete muzicale folosind vocea sau un instrument.",
+    questions: [
+      "Tipotezi sub duș?",
+      "Ai tipotat vreodată în public?",
+      "Tipotezi mai mult singur sau cu alții?",
+      "Tipotezi când ești fericit?",
+      "Ai tipota la karaoke?",
+      "Ai tipotat azi cel puțin o dată?",
     ],
   },
 ]
@@ -105,23 +118,6 @@ export function makeQuestionItems(texts: string[]): QuestionItem[] {
   }))
 }
 
-// Lightweight Q&A simulation – when a guesser asks a player something,
-// we generate a plausible "yes / no / kind of" answer based on the word.
-// In a real app this would come from the actual player.
-export function simulateAnswer(question: string, word: string): string {
-  const q = question.toLowerCase()
-  const w = word.toLowerCase()
-  if (q.includes(w)) return "Yes — but I can't say that out loud!"
-  if (q.startsWith("is it") || q.startsWith("does it") || q.startsWith("can it")) {
-    // 70% yes, 20% kind of, 10% no
-    const r = Math.random()
-    if (r < 0.7) return "Yes."
-    if (r < 0.9) return "Kind of."
-    return "No."
-  }
-  return "Hmm, sort of — think about it differently."
-}
-
 // Used to generate a friendly room code like "WORD-3F2A"
 export function generateRoomCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -130,4 +126,16 @@ export function generateRoomCode(): string {
     code += chars[Math.floor(Math.random() * chars.length)]
   }
   return code
+}
+
+// Compares a guess to the secret verb. Lenient: ignores the leading
+// particle "a ", whitespace, case, and trailing punctuation.
+export function isCorrectVerbGuess(guess: string, secret: string): boolean {
+  const normalize = (s: string) =>
+    s
+      .trim()
+      .toLowerCase()
+      .replace(/^a\s+/, "")
+      .replace(/[\s.,!?]+$/, "")
+  return normalize(guess) === normalize(secret)
 }

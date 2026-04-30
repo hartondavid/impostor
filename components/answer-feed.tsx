@@ -1,15 +1,16 @@
 "use client"
 
 import type { AnswerEntry, Player } from "@/lib/types"
-import { ArrowRight, MessageSquare } from "lucide-react"
+import { ArrowRight, MessageSquare, Mic } from "lucide-react"
 
 interface AnswerFeedProps {
   history: AnswerEntry[]
   players: Player[]
 }
 
-// Live transcript of every question the guesser has asked and the
-// answers received. Renders in newest-first order for quick scanning.
+// Live transcript of every question the guesser has asked. Players answer
+// VERBALLY (out loud), so we don't store a written reply — we just record
+// which player got the question. Newest first for quick scanning.
 export function AnswerFeed({ history, players }: AnswerFeedProps) {
   if (history.length === 0) {
     return (
@@ -17,10 +18,10 @@ export function AnswerFeed({ history, players }: AnswerFeedProps) {
         <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
           <MessageSquare className="h-5 w-5 text-muted-foreground" />
         </div>
-        <p className="text-sm font-medium">No questions asked yet</p>
+        <p className="text-sm font-medium">Nicio întrebare încă</p>
         <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-          Pick a player below and use a suggested question — their answer will
-          show up here.
+          Alege un jucător și folosește o întrebare sugerată — el îți va
+          răspunde cu voce tare.
         </p>
       </div>
     )
@@ -39,21 +40,19 @@ export function AnswerFeed({ history, players }: AnswerFeedProps) {
           >
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="rounded-md bg-primary/15 px-1.5 py-0.5 font-semibold uppercase tracking-wider text-primary">
-                Asked
+                Întrebare
               </span>
               <ArrowRight className="h-3 w-3" />
               <span className="font-medium text-foreground">
-                {player?.name ?? "Player"}
+                {player?.name ?? "Jucător"}
               </span>
             </div>
             <p className="mt-1.5 text-sm leading-relaxed text-foreground/90">
               {entry.question}
             </p>
-            <div className="mt-2 flex items-start gap-2 rounded-lg bg-secondary/40 p-2.5">
-              <span className="mt-0.5 rounded-md bg-accent/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent">
-                Reply
-              </span>
-              <p className="text-sm leading-relaxed">{entry.answer}</p>
+            <div className="mt-2 flex items-center gap-2 rounded-lg bg-secondary/40 px-2.5 py-2 text-xs text-muted-foreground">
+              <Mic className="h-3.5 w-3.5 text-accent" />
+              <span>Răspuns verbal — ascultă răspunsul jucătorului.</span>
             </div>
           </li>
         )
