@@ -83,8 +83,8 @@ export function GuesserView() {
 
         {!selectedPlayerId && (
           <p className="text-xs text-muted-foreground">
-            Sfat: alege un jucător din dreapta pentru a activa „Folosește
-            această întrebare”.
+            Tip: pick a player on the right to enable &ldquo;Use this
+            question&rdquo;.
           </p>
         )}
 
@@ -92,11 +92,11 @@ export function GuesserView() {
         <div className="rounded-2xl border border-border bg-card p-5">
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="guess">Verbul tău (ghicire finală)</FieldLabel>
+              <FieldLabel htmlFor="guess">Final guess</FieldLabel>
               <div className="flex gap-2">
                 <Input
                   id="guess"
-                  placeholder="ex. a alerga"
+                  placeholder="Type the secret word…"
                   value={guess}
                   onChange={(e) => setGuess(e.target.value)}
                   onKeyDown={(e) => {
@@ -110,7 +110,7 @@ export function GuesserView() {
                   ) : (
                     <>
                       <Send className="mr-2 h-4 w-4" />
-                      Trimite
+                      Submit
                     </>
                   )}
                 </Button>
@@ -122,7 +122,7 @@ export function GuesserView() {
         {/* History */}
         <div>
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Istoric · {round.history.length} întrebări puse
+            History · {round.history.length} asked
           </h3>
           <AnswerFeed history={round.history} players={room.players} />
         </div>
@@ -131,13 +131,13 @@ export function GuesserView() {
       <aside className="space-y-5">
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="flex items-baseline justify-between">
-            <h3 className="text-sm font-semibold">Jucători</h3>
+            <h3 className="text-sm font-semibold">Players</h3>
             <span className="text-xs text-muted-foreground">
-              Apasă pentru a selecta
+              Tap to select
             </span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            {askedIds.size} din {askable.length} întrebați
+            {askedIds.size} of {askable.length} asked
           </p>
           <div className="mt-3">
             <PlayerList
