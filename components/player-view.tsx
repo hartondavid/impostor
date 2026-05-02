@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useGame } from "@/lib/game-context"
 import { GameStatusBanner } from "@/components/game-status-banner"
 import { PlayerList } from "@/components/player-list"
-import { Eye, Lock, FastForward } from "lucide-react"
+import { Eye, Lock, FastForward, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DelegateHostCard } from "@/components/delegate-host"
 
@@ -13,7 +13,7 @@ import { DelegateHostCard } from "@/components/delegate-host"
 // - who the guesser is
 // - the question history (what's been asked)
 export function PlayerView() {
-  const { room, viewer, viewerId, guesser, forceEndRound } = useGame()
+  const { room, viewer, viewerId, guesser, forceEndRound, guessedCorrectly } = useGame()
   const [isPeeking, setIsPeeking] = useState(false)
 
   const round = room?.currentRound
@@ -85,16 +85,25 @@ export function PlayerView() {
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
             <h3 className="mb-2 text-sm font-semibold text-primary">Host Controls</h3>
             <p className="mb-4 text-xs text-muted-foreground">
-              As the host, you can end this round early and start the next one if the guesser is stuck.
+              Confirmă dacă ghicitorul a găsit cuvântul corect sau sari peste runda dacă este blocat.
             </p>
-            <Button 
-              onClick={forceEndRound}
-              variant="outline"
-              className="w-full sm:w-auto"
-            >
-              <FastForward className="mr-2 h-4 w-4" />
-              Force Next Round
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              <Button 
+                onClick={() => guessedCorrectly()} 
+                className="flex-1 sm:flex-none rounded-full font-bold bg-[#a3e635] text-black hover:bg-[#bef264] border-none shadow-md shadow-[#a3e635]/10 transition-all h-11 px-6"
+              >
+                <Trophy className="mr-2 h-4 w-4" />
+                Cuvânt ghicit!
+              </Button>
+              <Button 
+                onClick={forceEndRound}
+                variant="outline"
+                className="flex-1 sm:flex-none rounded-full h-11 px-6 border-primary/20 hover:bg-primary/10 hover:text-primary transition-all"
+              >
+                <FastForward className="mr-2 h-4 w-4" />
+                Sari peste runda
+              </Button>
+            </div>
           </div>
         )}
       </section>

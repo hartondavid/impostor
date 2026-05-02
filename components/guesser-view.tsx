@@ -34,19 +34,6 @@ export function GuesserView() {
           onSkip={skipQuestion}
         />
 
-        <div className="rounded-2xl border border-primary/50 bg-primary/10 p-5 text-center">
-          <h3 className="mb-2 font-semibold text-primary">Ai ghicit cuvântul?</h3>
-          <p className="mb-4 text-xs text-primary/80">
-            Dacă ai reușit să ghicești verbul secret în urma răspunsurilor, apasă butonul de mai jos! Vei deveni noul Host.
-          </p>
-          <Button 
-            onClick={() => guessedCorrectly()} 
-            className="w-full h-14 sm:h-12 rounded-full font-bold bg-[#a3e635] text-black hover:bg-[#bef264] border-none shadow-lg shadow-[#a3e635]/10 text-base transition-all"
-          >
-            <Trophy className="mr-2 h-5 w-5" />
-            Am ghicit cuvântul!
-          </Button>
-        </div>
       </section>
 
       <aside className="space-y-5">

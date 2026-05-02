@@ -217,20 +217,49 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [state.room?.code])
 
-  // Connection Resilience: Mark player as disconnected on tab close (instead of removing them)
-  // This allows them to rejoin later using the same name.
+  // Connection Resilience: Remove player from DB on tab close/refresh.
+  // This ensures the player list is always accurate and empty rooms are cleaned up.
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       const room = stateRef.current.room
-      const me = room?.players.find(p => p.id === stateRef.current.viewerId)
-      if (!room || !me || !supabase) return
+      const meId = stateRef.current.viewerId
+      if (!room || !meId || !supabase) return
 
-      const updatedPlayers = room.players.map((p) =>
-        p.id === me.id ? { ...p, connected: false } : p
-      )
+      const remainingPlayers = room.players.filter((p) => p.id !== meId)
 
-      // Use sendBeacon or a synchronous fetch if possible
-      supabase.from("game_rooms").update({ players: updatedPlayers }).eq("room_code", room.code).then()
+      if (remainingPlayers.length === 0) {
+        // Last player leaving, delete the entire room
+        supabase.from("game_rooms").delete().eq("room_code", room.code).then()
+      } else {
+        // Someone else is still there
+        let nextHostId = room.hostId
+        let updatedPlayers = remainingPlayers
+        let nextStatus = room.status
+        let nextRound = room.currentRound
+
+        // 1. If the leaving player was the host, we must crown a new one
+        if (meId === room.hostId) {
+          const nextHost = remainingPlayers[0]
+          nextHostId = nextHost.id
+          updatedPlayers = remainingPlayers.map((p) =>
+            p.id === nextHostId ? { ...p, isHost: true } : p
+          )
+        }
+
+        // 2. If the leaving player was the guesser during a round, reset the game state
+        if (meId === room.currentRound?.guesserId && room.status === "in_progress") {
+          nextStatus = "ready"
+          nextRound = undefined
+        }
+
+        // Update the room with the new player list, host, and potentially reset status
+        supabase.from("game_rooms").update({
+          players: updatedPlayers,
+          host_id: nextHostId,
+          status: nextStatus,
+          current_round: nextRound || null
+        }).eq("room_code", room.code).then()
+      }
     }
 
     window.addEventListener("beforeunload", handleBeforeUnload)

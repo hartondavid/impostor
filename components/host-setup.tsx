@@ -72,7 +72,7 @@ export function HostSetup() {
   // ── Guesser handlers ──
   const onRandomGuesser = async () => {
     await assignGuesser()
-    toast.success("Ghicitor ales aleatoriu!")
+    toast.success("Ghicitor ales random!")
   }
 
   const onPickGuesser = async (player: Player) => {
@@ -145,7 +145,7 @@ export function HostSetup() {
                 )}
                 <Button onClick={onRandomGuesser} variant="outline">
                   <Shuffle className="mr-2 h-4 w-4" />
-                  {guesser && "Alege random"}
+                  {guesser ? "Alege random" : "Alege random"}
                 </Button>
               </div>
             ) : (
