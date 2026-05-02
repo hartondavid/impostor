@@ -8,18 +8,25 @@ interface PlayerListProps {
   players: Player[]
   // Highlight the local viewer's player
   viewerId?: string | null
-  // When provided, makes each row clickable (used by the guesser to pick someone to ask)
+  // When provided, makes each row clickable
   onPlayerClick?: (player: Player) => void
-  // Players whose ids are in this set get a "asked" indicator
+  // Players whose ids are in this set get an "asked" indicator
   askedIds?: Set<string>
+  // When true, suppress the Guesser badge — used before the round starts
+  // so non-host players can't see who was assigned
+  hideGuesserBadge?: boolean
+  // Optional suffix element rendered inside each row (e.g. action buttons)
+  rowAction?: (player: Player) => React.ReactNode
 }
 
-// Reusable list of players. Used in lobby + guesser dashboard + result screen.
+// Reusable list of players. Used in lobby + host-setup + guesser dashboard + result screen.
 export function PlayerList({
   players,
   viewerId,
   onPlayerClick,
   askedIds,
+  hideGuesserBadge = false,
+  rowAction,
 }: PlayerListProps) {
   return (
     <ul role="list" className="flex flex-col gap-2">
@@ -28,6 +35,7 @@ export function PlayerList({
         const asked = askedIds?.has(p.id)
         const interactive = Boolean(onPlayerClick)
         const initial = p.name.charAt(0).toUpperCase()
+        const showGuesser = p.isGuesser && !hideGuesserBadge
 
         return (
           <li key={p.id}>
@@ -75,14 +83,14 @@ export function PlayerList({
                       <Crown className="h-3 w-3" /> Host
                     </span>
                   )}
-                  {p.isGuesser && (
+                  {showGuesser && (
                     <span className="inline-flex items-center gap-1 text-destructive">
-                      <Eye className="h-3 w-3" /> Guesser
+                      <Eye className="h-3 w-3" /> Ghicitor
                     </span>
                   )}
-                  {!p.isHost && !p.isGuesser && (
+                  {!p.isHost && !showGuesser && (
                     <span className="inline-flex items-center gap-1">
-                      <Wifi className="h-3 w-3" /> Player
+                      <Wifi className="h-3 w-3" /> Jucător
                     </span>
                   )}
                 </span>
@@ -93,6 +101,8 @@ export function PlayerList({
                   Asked
                 </span>
               )}
+
+              {rowAction?.(p)}
             </button>
           </li>
         )

@@ -13,6 +13,8 @@ export interface Player {
   connected: boolean
   // Aggregated score across rounds (won rounds as guesser or assist)
   score: number
+  // Tracks whether this player has already been the guesser in the current cycle
+  hasBeenGuesser: boolean
 }
 
 export interface QuestionItem {
@@ -23,16 +25,6 @@ export interface QuestionItem {
   hint?: string
   used: boolean
   skipped: boolean
-}
-
-export interface AnswerEntry {
-  id: string
-  // The guesser's question to a specific player
-  question: string
-  // The id of the player it was directed to
-  toPlayerId: string
-  // Players answer verbally (out loud) — no written answer is stored.
-  createdAt: number
 }
 
 export interface Round {
@@ -48,10 +40,6 @@ export interface Round {
   questions: QuestionItem[]
   // Index of the current visible question for the guesser
   currentQuestionIndex: number
-  // Q&A history during the round
-  history: AnswerEntry[]
-  // The guesser's submitted final guess (if any)
-  finalGuess?: string
   // Whether the guesser won this round
   won?: boolean
   startedAt: number
@@ -61,12 +49,16 @@ export interface Round {
 export interface Room {
   code: string
   hostId: string
+  // The player who created the room — they can never become a guesser
+  firstHostId: string
   status: RoomStatus
   players: Player[]
   currentRound?: Round
   // History of completed rounds
   pastRounds: Round[]
   createdAt: number
+  // When true, the next newRound() call keeps the current guesser unchanged (host skipped the round)
+  roundSkipped?: boolean
 }
 
 // Which screen the local viewer is currently rendering.

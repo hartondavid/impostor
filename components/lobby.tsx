@@ -7,6 +7,7 @@ import { RoomHeader } from "@/components/room-header"
 import { Spinner } from "@/components/ui/spinner"
 import { Eye, Play, UserPlus } from "lucide-react"
 import { toast } from "sonner"
+import { DelegateHostCard } from "@/components/delegate-host"
 
 // Lobby = pre-game waiting room. Host can add fake players (for demo / testing
 // without a backend) and start the game once at least one other player is in.
@@ -18,8 +19,6 @@ export function Lobby() {
     setViewAs,
     assignGuesser,
     setScreen,
-    simulateJoin,
-    generateAIRound,
     startRound,
     isGeneratingWord,
   } = useGame()
@@ -30,11 +29,6 @@ export function Lobby() {
   const isViewerHost = host?.id === viewerId
   const playersLocal = room.players.length
 
-  const onSimulateJoin = () => {
-    simulateJoin()
-    toast("A new player joined the room")
-  }
-
   const onStart = () => {
     if (room.players.length < 2) {
       toast.error("Need at least 2 players to start")
@@ -44,17 +38,7 @@ export function Lobby() {
     setScreen("host_setup")
   }
 
-  // For the join flow demo: pretend the host has chosen Gemini and started.
-  const onDemoContinue = async () => {
-    if (room.players.length < 2) return
-    assignGuesser()
-    const result = await generateAIRound()
-    if (!result) {
-      toast.error("Couldn't start round.")
-      return
-    }
-    startRound(result.word, result.definition, result.questions, "gemini")
-  }
+
 
   return (
     <div className="min-h-screen">
@@ -71,9 +55,8 @@ export function Lobby() {
               Share your room code, then start the hunt.
             </h1>
             <p className="mt-2 text-pretty text-muted-foreground">
-              Once everyone is in, we&apos;ll randomly pick a Guesser. They
-              won&apos;t see the secret word — only{" "}
-              <span className="text-foreground">you</span> will.
+              Odată ce toată lumea e în sală, gazda alege un Ghicitor și un cuvânt secret.{" "}
+              <span className="text-foreground">Jucătorii află cine ghicește abia când runda pornește.</span>
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -92,15 +75,6 @@ export function Lobby() {
                     <Play className="mr-2 h-4 w-4" />
                     Start game
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={onSimulateJoin}
-                    className="bg-transparent"
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Simulate player join
-                  </Button>
                 </>
               )}
               {!isViewerHost && (
@@ -109,51 +83,12 @@ export function Lobby() {
                     <Spinner className="h-4 w-4" />
                     Waiting for host {host?.name} to start the game…
                   </div>
-                  <Button
-                    onClick={onDemoContinue}
-                    variant="outline"
-                    disabled={isGeneratingWord}
-                    className="self-start bg-transparent"
-                  >
-                    {isGeneratingWord ? (
-                      <Spinner className="mr-2 h-4 w-4" />
-                    ) : (
-                      <Play className="mr-2 h-4 w-4" />
-                    )}
-                    Demo: continue as if host started
-                  </Button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* "View as" preview switcher — purely a demo helper so the user
-              can see what each role's screen looks like during the round. */}
-          <div className="rounded-2xl border border-dashed border-border bg-card/40 p-5">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <Eye className="h-3.5 w-3.5" />
-              Preview perspective
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              In a real session each player only sees their own screen. For demo
-              purposes you can switch perspective during the round.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {(["host", "guesser", "player"] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setViewAs(v)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                    viewAs === v
-                      ? "border-primary/50 bg-primary/15 text-primary"
-                      : "border-border bg-secondary/40 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-          </div>
+
         </section>
 
         {/* Right: player list */}
@@ -166,7 +101,14 @@ export function Lobby() {
               {playersLocal} connected
             </span>
           </div>
-          <PlayerList players={room.players} viewerId={viewerId} />
+          <PlayerList
+            players={room.players}
+            viewerId={viewerId}
+            hideGuesserBadge={!isViewerHost}
+          />
+          <div className="pt-4">
+            <DelegateHostCard />
+          </div>
         </aside>
       </main>
     </div>

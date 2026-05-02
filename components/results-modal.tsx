@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { RoomHeader } from "@/components/room-header"
 import { PlayerList } from "@/components/player-list"
 import { CheckCircle2, RotateCcw, Trophy, XCircle } from "lucide-react"
+import { DelegateHostCard } from "@/components/delegate-host"
 
 // End-of-round screen. Shows whether the guesser won, the secret word,
 // the # of questions used, and a CTA to start a new round (rotates guesser).
@@ -15,7 +16,6 @@ export function ResultsScreen() {
 
   const guesser = room.players.find((p) => p.id === round.guesserId)
   const won = round.won
-  const questionsAsked = round.history.length
   const skipped = round.questions.filter((q) => q.skipped).length
 
   return (
@@ -55,34 +55,19 @@ export function ResultsScreen() {
                 {won ? `${guesser?.name ?? "Guesser"} cracked it.` : "Better luck next round."}
               </h1>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <ResultStat
                   label="Secret word"
                   value={round.word}
                   mono
                 />
-                <ResultStat label="Questions asked" value={String(questionsAsked)} />
                 <ResultStat label="Suggestions skipped" value={String(skipped)} />
               </div>
-
-              {round.finalGuess && (
-                <p className="mt-5 text-sm text-muted-foreground">
-                  Final guess:{" "}
-                  <span className="font-mono font-semibold text-foreground">
-                    {round.finalGuess.toLowerCase()}
-                  </span>{" "}
-                  {won ? (
-                    <CheckCircle2 className="ml-1 inline h-3.5 w-3.5 text-primary" />
-                  ) : (
-                    <XCircle className="ml-1 inline h-3.5 w-3.5 text-destructive" />
-                  )}
-                </p>
-              )}
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button onClick={newRound} size="lg">
                   <RotateCcw className="mr-2 h-4 w-4" />
-                  New round (rotate guesser)
+                  Next Round
                 </Button>
               </div>
             </div>
@@ -108,6 +93,9 @@ export function ResultsScreen() {
             players={[...room.players].sort((a, b) => b.score - a.score)}
             viewerId={viewerId}
           />
+          <div className="pt-4">
+            <DelegateHostCard />
+          </div>
         </aside>
       </main>
     </div>

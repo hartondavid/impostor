@@ -3,15 +3,16 @@
 import { useGame } from "@/lib/game-context"
 import { GameStatusBanner } from "@/components/game-status-banner"
 import { PlayerList } from "@/components/player-list"
-import { AnswerFeed } from "@/components/answer-feed"
-import { Eye, Lock } from "lucide-react"
+import { Eye, Lock, FastForward } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { DelegateHostCard } from "@/components/delegate-host"
 
 // Regular player's dashboard. Sees:
 // - the secret word (the whole point of being a regular player)
 // - who the guesser is
 // - the question history (what's been asked)
 export function PlayerView() {
-  const { room, viewerId, guesser } = useGame()
+  const { room, viewer, viewerId, guesser, forceEndRound } = useGame()
   const round = room?.currentRound
   if (!room || !round) return null
 
@@ -50,13 +51,23 @@ export function PlayerView() {
           </div>
         </div>
 
-        {/* What the guesser has asked so far */}
-        <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Question history
-          </h3>
-          <AnswerFeed history={round.history} players={room.players} />
-        </div>
+        {/* Host Controls */}
+        {viewer?.isHost && (
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+            <h3 className="mb-2 text-sm font-semibold text-primary">Host Controls</h3>
+            <p className="mb-4 text-xs text-muted-foreground">
+              As the host, you can end this round early and start the next one if the guesser is stuck.
+            </p>
+            <Button 
+              onClick={forceEndRound}
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
+              <FastForward className="mr-2 h-4 w-4" />
+              Force Next Round
+            </Button>
+          </div>
+        )}
       </section>
 
       <aside className="space-y-3">
@@ -64,6 +75,9 @@ export function PlayerView() {
           Room
         </h2>
         <PlayerList players={room.players} viewerId={viewerId} />
+        <div className="pt-4">
+          <DelegateHostCard />
+        </div>
       </aside>
     </main>
   )

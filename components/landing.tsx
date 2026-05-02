@@ -64,7 +64,7 @@ export function Landing() {
       <main className="relative mx-auto flex max-w-6xl flex-col items-center px-4 py-12 sm:px-6 sm:py-20">
         <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-          Powered by Gemini
+          Powered by AI
         </span>
 
         <h1 className="text-balance text-center text-5xl font-semibold tracking-tight sm:text-6xl md:text-7xl">
@@ -119,7 +119,7 @@ export function Landing() {
                 </Button>
                 <Button
                   onClick={() => {
-                    createRoom(hostName.trim() || "Host", 4)
+                    createRoom(hostName.trim() || "Host")
                     setCreateOpen(false)
                   }}
                 >
@@ -160,10 +160,10 @@ export function Landing() {
                     placeholder="A1B2C3"
                     value={joinCode}
                     onChange={(e) =>
-                      setJoinCode(e.target.value.toUpperCase().slice(0, 6))
+                      setJoinCode(e.target.value.toUpperCase().slice(0, 4))
                     }
                     className="font-mono uppercase tracking-widest"
-                    maxLength={6}
+                    maxLength={4}
                   />
                 </Field>
               </FieldGroup>
@@ -199,7 +199,7 @@ export function Landing() {
           <FeatureCard
             icon={<Brain className="h-5 w-5 text-accent" />}
             title="AI-crafted hints"
-            description="Gemini generates the secret word, definitions and helper questions."
+            description="AI generates the secret word, definitions and helper questions."
           />
           <FeatureCard
             icon={<Zap className="h-5 w-5 text-destructive" />}

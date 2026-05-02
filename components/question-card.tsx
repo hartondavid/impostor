@@ -2,17 +2,14 @@
 
 import type { QuestionItem } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { SkipForward, MessageCircleQuestion } from "lucide-react"
+import { useGame } from "@/lib/game-context"
+import { SkipForward, MessageCircleQuestion, Plus, Loader2 } from "lucide-react"
 
 interface QuestionCardProps {
   question: QuestionItem | null
   total: number
   current: number
   onSkip: () => void
-  onAsk?: () => void
-  // Disabled state used when the guesser has already asked all players or
-  // is waiting for an answer.
-  disabled?: boolean
 }
 
 // The big "what to ask next" card shown at the top of the guesser view.
@@ -21,9 +18,9 @@ export function QuestionCard({
   total,
   current,
   onSkip,
-  onAsk,
-  disabled,
 }: QuestionCardProps) {
+  const { getMoreQuestions, isGeneratingQuestions } = useGame()
+
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
@@ -41,23 +38,28 @@ export function QuestionCard({
       </p>
 
       <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-        {onAsk && (
+        {question ? (
           <Button
-            onClick={onAsk}
-            disabled={disabled || !question}
+            onClick={onSkip}
+            variant="outline"
+            className="flex-1 bg-transparent border-primary/20 hover:bg-primary/5 text-primary"
+          >
+            <SkipForward className="mr-2 h-4 w-4" /> Next Question
+          </Button>
+        ) : (
+          <Button
+            onClick={getMoreQuestions}
+            disabled={isGeneratingQuestions}
             className="flex-1"
           >
-            Use this question
+            {isGeneratingQuestions ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="mr-2 h-4 w-4" />
+            )}
+            Generate more questions
           </Button>
         )}
-        <Button
-          onClick={onSkip}
-          variant="outline"
-          disabled={disabled || !question}
-          className="flex-1 bg-transparent"
-        >
-          <SkipForward className="mr-2 h-4 w-4" /> Skip
-        </Button>
       </div>
     </div>
   )
