@@ -24,17 +24,15 @@ export function ResultsScreen() {
       <main className="mx-auto grid max-w-5xl gap-6 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_320px]">
         <section className="space-y-5">
           <div
-            className={`relative overflow-hidden rounded-2xl border p-8 ${
-              won
+            className={`relative overflow-hidden rounded-2xl border p-8 ${won
                 ? "border-primary/40 bg-primary/5"
                 : "border-destructive/40 bg-destructive/5"
-            }`}
+              }`}
           >
             <div
               aria-hidden
-              className={`pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent ${
-                won ? "from-primary/20" : "from-destructive/20"
-              }`}
+              className={`pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent ${won ? "from-primary/20" : "from-destructive/20"
+                }`}
             />
             <div className="relative">
               <div className="flex items-center gap-2">

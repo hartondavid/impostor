@@ -123,7 +123,7 @@ export function HostSetup() {
                 active={guesserMode === "random"}
                 onClick={() => setGuesserMode("random")}
                 icon={<Shuffle className="h-4 w-4 text-primary" />}
-                title="Aleatoriu"
+                title="Alege random"
                 description="Aplicația alege random un jucator eligibil."
               />
               <ModeTile
@@ -145,7 +145,7 @@ export function HostSetup() {
                 )}
                 <Button onClick={onRandomGuesser} variant="outline">
                   <Shuffle className="mr-2 h-4 w-4" />
-                  {guesser ? "Rerulează aleatoriu" : "Alege aleatoriu"}
+                  {guesser && "Alege random"}
                 </Button>
               </div>
             ) : (
@@ -301,8 +301,8 @@ function ModeTile({
       type="button"
       onClick={onClick}
       className={`flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors ${active
-          ? "border-primary/60 bg-primary/10"
-          : "border-border bg-secondary/40 hover:bg-secondary/60"
+        ? "border-primary/60 bg-primary/10"
+        : "border-border bg-secondary/40 hover:bg-secondary/60"
         }`}
     >
       <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background">

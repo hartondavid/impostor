@@ -27,7 +27,7 @@ export function DelegateHostCard() {
         <h3 className="text-sm font-semibold text-accent">Deleagă rolul de gazdă</h3>
       </div>
       <p className="text-xs text-muted-foreground">
-        Transferă corona de gazdă unui alt jucător.
+        Deleagă rolul de gazdă unui alt jucător.
       </p>
       <ul className="flex flex-col gap-2">
         {delegateCandidates.map((p) => (

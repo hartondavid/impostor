@@ -628,7 +628,52 @@ export function GameProvider({ children }: { children: ReactNode }) {
     await syncRoom(newRoom, "host_setup")
   }, [])
 
-  const leaveRoom = useCallback(() => {
+  const leaveRoom = useCallback(async () => {
+    const room = stateRef.current.room
+    const meId = stateRef.current.viewerId
+
+    if (room && meId && supabase) {
+      try {
+        const remainingPlayers = room.players.filter((p) => p.id !== meId)
+
+        if (remainingPlayers.length === 0) {
+          // Last player is leaving, delete the entire room
+          await supabase.from("game_rooms").delete().eq("room_code", room.code)
+        } else {
+          // Someone else is still there
+          let nextHostId = room.hostId
+          let updatedPlayers = remainingPlayers
+          let nextStatus = room.status
+          let nextRound = room.currentRound
+
+          // 1. If the leaving player was the host, we must crown a new one
+          if (meId === room.hostId) {
+            const nextHost = remainingPlayers[0]
+            nextHostId = nextHost.id
+            updatedPlayers = remainingPlayers.map((p) =>
+              p.id === nextHostId ? { ...p, isHost: true } : p
+            )
+          }
+
+          // 2. If the leaving player was the guesser during a round, reset the game state
+          if (meId === room.currentRound?.guesserId && room.status === "in_progress") {
+            nextStatus = "ready"
+            nextRound = undefined
+          }
+
+          // Update the room with the new player list, host, and potentially reset status
+          await supabase.from("game_rooms").update({
+            players: updatedPlayers,
+            host_id: nextHostId,
+            status: nextStatus,
+            current_round: nextRound || null
+          }).eq("room_code", room.code)
+        }
+      } catch (err) {
+        console.error("Failed to cleanup room/player on leave:", err)
+      }
+    }
+
     localStorage.removeItem("wg_room_code")
     localStorage.removeItem("wg_user_name")
     setState(initialState)

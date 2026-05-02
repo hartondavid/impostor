@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useGame } from "@/lib/game-context"
 import { GameStatusBanner } from "@/components/game-status-banner"
 import { PlayerList } from "@/components/player-list"
@@ -13,6 +14,8 @@ import { DelegateHostCard } from "@/components/delegate-host"
 // - the question history (what's been asked)
 export function PlayerView() {
   const { room, viewer, viewerId, guesser, forceEndRound } = useGame()
+  const [isPeeking, setIsPeeking] = useState(false)
+
   const round = room?.currentRound
   if (!room || !round) return null
 
@@ -32,21 +35,47 @@ export function PlayerView() {
             className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/15 to-transparent"
           />
           <div className="relative">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <Lock className="h-3.5 w-3.5 text-primary" />
-              The secret word
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Lock className="h-3.5 w-3.5 text-primary" />
+                The secret word
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary active:scale-95"
+                onMouseEnter={() => setIsPeeking(true)}
+                onMouseLeave={() => setIsPeeking(false)}
+                onTouchStart={(e) => {
+                  e.preventDefault()
+                  setIsPeeking(true)
+                }}
+                onTouchEnd={() => setIsPeeking(false)}
+                aria-label="Peek word"
+              >
+                <Eye className={`h-4 w-4 ${isPeeking ? "text-primary" : ""}`} />
+              </Button>
             </div>
-            <p className="mt-3 font-mono text-4xl font-bold tracking-tight text-primary sm:text-5xl">
-              {round.word}
-            </p>
+
+            <div className="mt-3 flex items-baseline gap-2">
+              <p 
+                className={`font-mono text-4xl font-bold tracking-tight transition-all duration-300 sm:text-5xl ${
+                  isPeeking ? "text-primary blur-0 opacity-100" : "text-muted-foreground/20 blur-md opacity-50 select-none"
+                }`}
+              >
+                {isPeeking ? round.word : "••••••••"}
+              </p>
+            </div>
+
             {round.definition && (
               <p className="mt-3 max-w-xl text-pretty text-sm text-muted-foreground">
                 {round.definition}
               </p>
             )}
             <p className="mt-4 text-xs text-muted-foreground">
-              <Eye className="mr-1 inline h-3 w-3" />
-              The Guesser does <span className="font-semibold text-foreground">not</span> see this.
+              <Lock className="mr-1 inline h-3 w-3" />
+              Hover or hold the eye icon to reveal. The Guesser <span className="font-semibold text-foreground">never</span> sees this.
             </p>
           </div>
         </div>

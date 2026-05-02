@@ -41,8 +41,7 @@ export function GuesserView() {
           </p>
           <Button 
             onClick={() => guessedCorrectly()} 
-            size="lg" 
-            className="w-full sm:w-auto font-bold bg-primary hover:bg-primary/90 text-primary-foreground"
+            className="w-full h-14 sm:h-12 rounded-full font-bold bg-[#a3e635] text-black hover:bg-[#bef264] border-none shadow-lg shadow-[#a3e635]/10 text-base transition-all"
           >
             <Trophy className="mr-2 h-5 w-5" />
             Am ghicit cuvântul!

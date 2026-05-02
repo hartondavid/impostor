@@ -82,9 +82,11 @@ export function Landing() {
           {/* Create room dialog */}
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <Button size="lg" className="flex-1">
+              <Button
+                className="flex-1 h-16 rounded-full bg-[#a3e635] text-black hover:bg-[#bef264] hover:-translate-y-0.5 active:scale-[0.98] border-none font-bold text-lg transition-all shadow-xl shadow-[#a3e635]/20 group"
+              >
                 Create room
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
@@ -118,6 +120,7 @@ export function Landing() {
                   Cancel
                 </Button>
                 <Button
+                  className="rounded-full h-11 px-8 font-semibold"
                   onClick={() => {
                     createRoom(hostName.trim() || "Host")
                     setCreateOpen(false)
@@ -132,7 +135,10 @@ export function Landing() {
           {/* Join room dialog */}
           <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
             <DialogTrigger asChild>
-              <Button size="lg" variant="outline" className="flex-1 bg-transparent">
+              <Button
+                variant="outline"
+                className="flex-1 h-16 rounded-full bg-slate-900/60 border-slate-800 text-white hover:bg-slate-800 hover:text-white hover:-translate-y-0.5 active:scale-[0.98] font-bold text-lg transition-all backdrop-blur-md"
+              >
                 Join room
               </Button>
             </DialogTrigger>
@@ -157,7 +163,7 @@ export function Landing() {
                   <FieldLabel htmlFor="room-code">Room code</FieldLabel>
                   <Input
                     id="room-code"
-                    placeholder="A1B2C3"
+                    placeholder="A1B2"
                     value={joinCode}
                     onChange={(e) =>
                       setJoinCode(e.target.value.toUpperCase().slice(0, 4))
@@ -177,6 +183,7 @@ export function Landing() {
                 </Button>
                 <Button
                   disabled={joinCode.length < 4}
+                  className="rounded-full h-11 px-8 font-semibold"
                   onClick={() => {
                     joinRoom(joinCode, joinName.trim() || "You")
                     setJoinOpen(false)
