@@ -91,15 +91,16 @@ const GameContext = createContext<GameContextValue | null>(null)
 
 // ---------- Guesser rotation helper ----------
 // Rules:
-//  1. The first/original host (firstHostId) can NEVER be a guesser.
-//  2. Pick randomly from players who haven't been guesser yet (current cycle).
-//  3. When everyone eligible has been a guesser, reset the cycle and pick randomly again.
+//  1. The CURRENT host (hostId) cannot be a guesser (they know the word).
+//  2. The original host (firstHostId) CAN be a guesser if they are not the current host.
+//  3. Pick randomly from players who haven't been guesser yet (current cycle).
+//  4. When everyone eligible has been a guesser, reset the cycle and pick randomly again.
 function pickNextGuesser(room: Room): { player: Player; cycleReset: boolean } {
-  const eligible = room.players.filter((p) => p.id !== room.firstHostId)
+  const eligible = room.players.filter((p) => p.id !== room.hostId)
 
   if (eligible.length === 0) {
-    // Fallback: shouldn't happen in a normal game
-    const fallback = room.players.find((p) => !p.isHost) ?? room.players[0]
+    // Fallback: if only 1 player, they must be the host, so pick them anyway
+    const fallback = room.players[0]
     return { player: fallback, cycleReset: false }
   }
 
@@ -127,6 +128,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // Use a ref to access the latest state inside callbacks without triggering re-renders or stale closures
   const stateRef = useRef(state)
   stateRef.current = state
+
+  // Auto-rejoin on mount if session exists in localStorage
+  useEffect(() => {
+    if (!supabase || state.room) return
+
+    const storedCode = localStorage.getItem("wg_room_code")
+    const storedName = localStorage.getItem("wg_user_name")
+
+    if (storedCode && storedName) {
+      // Small delay to ensure everything is ready
+      setTimeout(() => {
+        joinRoom(storedCode, storedName)
+      }, 500)
+    }
+  }, [supabase, state.room])
 
   // Internal helper to update both local state (optimistic) and Supabase
   const syncRoom = async (newRoom: Room, nextScreen?: Screen, nextViewAs?: ViewAs) => {
@@ -290,6 +306,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
 
       setState((prev) => ({ ...prev, viewerId: host.id }))
+      
+      // Persist for refresh
+      localStorage.setItem("wg_room_code", room.code)
+      localStorage.setItem("wg_user_name", normalizedName)
+
       await syncRoom(room, "lobby", "host")
     },
     []
@@ -336,6 +357,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
 
       setState((prev) => ({ ...prev, viewerId: newPlayerId }))
+
+      // Persist for refresh
+      localStorage.setItem("wg_room_code", upperCode)
+      localStorage.setItem("wg_user_name", normalizedName)
 
       const updatedRoom: Room = {
         code: data.room_code,
@@ -417,7 +442,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     const nextViewAs = stateRef.current.viewerId === playerId ? "host" : "player"
     // If we reset, the host should see the setup screen.
-    const nextScreen = shouldReset ? "host_setup" as Screen : undefined
+    // If we are delegating to someone else, the current user should see the lobby/waiting screen.
+    const nextScreen = shouldReset 
+      ? ("host_setup" as Screen) 
+      : (nextViewAs === "player" ? "lobby" as Screen : undefined)
 
     await syncRoom(newRoom, nextScreen, nextViewAs)
   }, [])
@@ -572,6 +600,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const leaveRoom = useCallback(() => {
+    localStorage.removeItem("wg_room_code")
+    localStorage.removeItem("wg_user_name")
     setState(initialState)
   }, [])
 

@@ -45,8 +45,8 @@ export function HostSetup() {
   if (!room) return null
   const isViewerHost = room.hostId === viewerId
 
-  // Players eligible to be guesser (not the first/original host)
-  const eligiblePlayers = room.players.filter((p) => p.id !== room.firstHostId)
+  // Players eligible to be guesser (anyone except the current host)
+  const eligiblePlayers = room.players.filter((p) => p.id !== room.hostId)
 
   // ── Word handlers ──
   const onGenerate = async () => {
@@ -78,6 +78,20 @@ export function HostSetup() {
   const onPickGuesser = async (player: Player) => {
     await setGuesser(player.id)
     toast.success(`${player.name} a fost selectat ca ghicitor.`)
+  }
+
+  if (!isViewerHost) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 text-center">
+        <div className="space-y-4">
+          <Spinner className="h-8 w-8 mx-auto text-primary" />
+          <h2 className="text-xl font-semibold">Rolul de gazdă a fost delegat</h2>
+          <p className="text-muted-foreground max-w-xs mx-auto">
+            Nu mai ai acces la setările jocului. Vei fi redirecționat către lobby imediat.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -286,11 +300,10 @@ function ModeTile({
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors ${
-        active
+      className={`flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors ${active
           ? "border-primary/60 bg-primary/10"
           : "border-border bg-secondary/40 hover:bg-secondary/60"
-      }`}
+        }`}
     >
       <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background">
         {icon}
