@@ -415,23 +415,33 @@ export function GameProvider({ children }: { children: ReactNode }) {
     await syncRoom(newRoom)
   }, [])
 
-  // Transfer the host crown to another player.
+  // Transfer the host crown to another player
   const delegateHost = useCallback(async (playerId: string) => {
     const room = stateRef.current.room
-    if (!room) return
+    if (!room || !supabase) return
 
     const updatedPlayers = room.players.map((p) => ({
       ...p,
       isHost: p.id === playerId,
-      // The delegated player is no longer a guesser while they're host
-      isGuesser: p.isGuesser && p.id !== playerId,
     }))
 
-    // If the game was in progress or round finished, reset to setup phase (ready)
-    // so the new host can choose a word and potentially a new guesser.
     const shouldReset = room.status === "in_progress" || room.status === "round_finished"
     const nextStatus = shouldReset ? "ready" as const : room.status
 
+    const newRoomData = {
+      host_id: playerId,
+      players: updatedPlayers,
+      status: nextStatus,
+      current_round: shouldReset ? null : (room.currentRound || null)
+    }
+
+    // Determine local navigation
+    const nextViewAs = stateRef.current.viewerId === playerId ? "host" : "player"
+    const nextScreen = shouldReset 
+      ? ("host_setup" as Screen) 
+      : (nextViewAs === "player" ? "lobby" as Screen : undefined)
+
+    // 1. Optimistic local update (Instant UI flip)
     const newRoom: Room = {
       ...room,
       hostId: playerId,
@@ -440,14 +450,33 @@ export function GameProvider({ children }: { children: ReactNode }) {
       currentRound: shouldReset ? undefined : room.currentRound
     }
 
-    const nextViewAs = stateRef.current.viewerId === playerId ? "host" : "player"
-    // If we reset, the host should see the setup screen.
-    // If we are delegating to someone else, the current user should see the lobby/waiting screen.
-    const nextScreen = shouldReset 
-      ? ("host_setup" as Screen) 
-      : (nextViewAs === "player" ? "lobby" as Screen : undefined)
+    setState((prev) => ({
+      ...prev,
+      room: newRoom,
+      ...(nextScreen ? { screen: nextScreen } : {}),
+      viewAs: nextViewAs,
+    }))
 
-    await syncRoom(newRoom, nextScreen, nextViewAs)
+    // 2. Sync with Supabase (using the same logic as syncRoom)
+    try {
+      const { error } = await supabase.from("game_rooms").upsert({
+        room_code: newRoom.code,
+        status: newRoom.status,
+        host_id: newRoom.hostId,
+        first_host_id: newRoom.firstHostId,
+        round_skipped: newRoom.roundSkipped ?? false,
+        players: newRoom.players,
+        current_round: newRoom.currentRound || null,
+        past_rounds: newRoom.pastRounds,
+      })
+      
+      if (error) {
+        console.error("Failed to delegate host in DB:", error)
+        toast.error("Eroare la sincronizarea cu serverul.")
+      }
+    } catch (err) {
+      console.error("Delegation error:", err)
+    }
   }, [])
 
   const startRound = useCallback(
