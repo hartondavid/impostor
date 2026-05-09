@@ -2,7 +2,7 @@
 
 export type RoomStatus = "waiting" | "ready" | "in_progress" | "round_finished"
 
-export type WordSource = "manual" | "gemini"
+export type WordSource = "manual" | "random"
 
 export interface Player {
   id: string
@@ -29,9 +29,10 @@ export interface QuestionItem {
 
 export interface Round {
   id: string
-  // The secret word for this round
+  // The secret verb for this round
   word: string
   source: WordSource
+  language?: "en" | "ro"
   // Short definition (often AI generated) shared with non-guessers
   definition?: string
   // The id of the player who is the guesser this round

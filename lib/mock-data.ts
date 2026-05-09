@@ -1,4 +1,6 @@
 import type { Player, QuestionItem } from "./types"
+import { VERB_POOL_EN, QUESTION_POOL_EN } from "./mock-data-en"
+import { Language } from "./translations"
 
 // Pool of fun mock player names used to populate a room when the
 // real-time backend is not connected. Keeps the demo feeling alive.
@@ -41,7 +43,7 @@ export function makeMockPlayer(
 }
 
 // 100 common Romanian verbs (acțiuni)
-export const VERB_POOL = [
+export const VERB_POOL_RO = [
   "a alerga", "a dansa", "a găti", "a citi", "a cânta", "a dormi", "a râde", "a plânge", "a sări", "a înota",
   "a scrie", "a desena", "a picta", "a vorbi", "a asculta", "a privi", "a vedea", "a auzi", "a simți", "a mirosi",
   "a gusta", "a mânca", "a bea", "a merge", "a zbura", "a conduce", "a repara", "a construi", "a dărâma", "a tăia",
@@ -55,7 +57,7 @@ export const VERB_POOL = [
 ]
 
 // 100 funny and unclear questions using "a tipota"
-export const QUESTION_POOL = [
+export const QUESTION_POOL_RO = [
   //Frecvență și obiceiuri
   "Tipotezi des?",
   "Cât de des tipotezi într-o săptămână?",
@@ -162,8 +164,23 @@ export const QUESTION_POOL = [
   "Există o versiune premium de tipotit sau e la fel pentru toată lumea?",
   "Crezi că tipotitul te definește ca persoană?",
   "Tipotitul tău s-a schimbat față de acum 5 ani?",
-  "Dacă cineva din grup ar tipoti în somn, cine crezi că ar fi?"
+  "Dacă cineva din grup ar tipoti în somn, cine crezi că ar fi?",
+  "Dacă ai fi forțat să tipotești zilnic la o anumită oră, ce oră ai alege?",
+  "Ai tipotit vreodată intenționat doar pentru a enerva pe cineva?",
+  "Dacă tipotitul ar face un zgomot specific, ce fel de zgomot ar fi?",
+  "Te-ai simțit vreodată vinovat după ce ai tipotit prea mult?",
+  "Dacă tipotitul ar fi ilegal, cât de repede te-ar prinde poliția?"
 ]
+
+export const VERB_POOL = {
+  en: VERB_POOL_EN,
+  ro: VERB_POOL_RO,
+}
+
+export const QUESTION_POOL = {
+  en: QUESTION_POOL_EN,
+  ro: QUESTION_POOL_RO,
+}
 
 export function makeQuestionItems(texts: string[]): QuestionItem[] {
   return texts.map((text, i) => ({
@@ -196,16 +213,15 @@ export function isCorrectVerbGuess(guess: string, secret: string): boolean {
   return normalize(guess) === normalize(secret)
 }
 
-export function generateLocalRound(word?: string) {
-  const selectedWord = word || VERB_POOL[Math.floor(Math.random() * VERB_POOL.length)]
+export function generateLocalRound(word?: string, lang: Language = "en") {
+  const selectedWord = word || VERB_POOL[lang][Math.floor(Math.random() * VERB_POOL[lang].length)]
 
   // Shuffle and pick 15 initial questions
-  const shuffled = [...QUESTION_POOL].sort(() => Math.random() - 0.5)
+  const shuffled = [...QUESTION_POOL[lang]].sort(() => Math.random() - 0.5)
   const initialQuestions = shuffled.slice(0, 100)
 
   return {
     word: selectedWord,
-    definition: "Verbul secret este o acțiune comună. Pune întrebări pentru a afla ce este!",
     questions: initialQuestions,
   }
 }

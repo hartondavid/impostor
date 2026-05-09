@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useGame } from "@/lib/game-context"
+import { useLanguage } from "@/lib/language-context"
 import { GameStatusBanner } from "@/components/game-status-banner"
 import { PlayerList } from "@/components/player-list"
 import { Eye, Lock, FastForward, Trophy } from "lucide-react"
@@ -9,11 +10,12 @@ import { Button } from "@/components/ui/button"
 import { DelegateHostCard } from "@/components/delegate-host"
 
 // Regular player's dashboard. Sees:
-// - the secret word (the whole point of being a regular player)
+// - the secret verb (the whole point of being a regular player)
 // - who the guesser is
 // - the question history (what's been asked)
 export function PlayerView() {
   const { room, viewer, viewerId, guesser, forceEndRound, guessedCorrectly } = useGame()
+  const { t } = useLanguage()
   const [isPeeking, setIsPeeking] = useState(false)
 
   const round = room?.currentRound
@@ -24,11 +26,11 @@ export function PlayerView() {
       <section className="space-y-5">
         <GameStatusBanner
           viewAs="player"
-          title="Help the guesser discover the word"
-          subtitle={`${guesser?.name ?? "The guesser"} can't see the word — only you and the rest of the room can.`}
+          title={t("playerTitle")}
+          subtitle={`${guesser?.name ?? t("playerSubtitle2")} ${t("playerSubtitle1")}`}
         />
 
-        {/* Secret word reveal — visible only to non-guessers. */}
+        {/* Secret verb reveal — visible only to non-guessers. */}
         <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6">
           <div
             aria-hidden
@@ -38,9 +40,9 @@ export function PlayerView() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <Lock className="h-3.5 w-3.5 text-primary" />
-                The secret word
+                {t("secretWordLabel")}
               </div>
-              
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -59,10 +61,9 @@ export function PlayerView() {
             </div>
 
             <div className="mt-3 flex items-baseline gap-2">
-              <p 
-                className={`font-mono text-4xl font-bold tracking-tight transition-all duration-300 sm:text-5xl ${
-                  isPeeking ? "text-primary blur-0 opacity-100" : "text-muted-foreground/20 blur-md opacity-50 select-none"
-                }`}
+              <p
+                className={`font-mono text-4xl font-bold tracking-tight transition-all duration-300 sm:text-5xl ${isPeeking ? "text-primary blur-0 opacity-100" : "text-muted-foreground/20 blur-md opacity-50 select-none"
+                  }`}
               >
                 {isPeeking ? round.word : "••••••••"}
               </p>
@@ -75,7 +76,7 @@ export function PlayerView() {
             )}
             <p className="mt-4 text-xs text-muted-foreground">
               <Lock className="mr-1 inline h-3 w-3" />
-              Hover or hold the eye icon to reveal. The Guesser <span className="font-semibold text-foreground">never</span> sees this.
+              {t("revealInstruction")} <span className="font-semibold text-foreground">{t("never")}</span> {t("seesThis")}
             </p>
           </div>
         </div>
@@ -83,25 +84,25 @@ export function PlayerView() {
         {/* Host Controls */}
         {viewer?.isHost && (
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
-            <h3 className="mb-2 text-sm font-semibold text-primary">Host Controls</h3>
+            <h3 className="mb-2 text-sm font-semibold text-primary">{t("hostControls")}</h3>
             <p className="mb-4 text-xs text-muted-foreground">
-              Confirmă dacă ghicitorul a găsit cuvântul corect sau sari peste runda dacă este blocat.
+              {t("hostControlsDesc")}
             </p>
             <div className="flex flex-wrap gap-3">
-              <Button 
-                onClick={() => guessedCorrectly()} 
+              <Button
+                onClick={() => guessedCorrectly()}
                 className="flex-1 sm:flex-none rounded-full font-bold bg-[#a3e635] text-black hover:bg-[#bef264] border-none shadow-md shadow-[#a3e635]/10 transition-all h-11 px-6"
               >
                 <Trophy className="mr-2 h-4 w-4" />
-                Cuvânt ghicit!
+                {t("wordGuessed")}
               </Button>
-              <Button 
+              <Button
                 onClick={forceEndRound}
                 variant="outline"
                 className="flex-1 sm:flex-none rounded-full h-11 px-6 border-primary/20 hover:bg-primary/10 hover:text-primary transition-all"
               >
                 <FastForward className="mr-2 h-4 w-4" />
-                Sari peste runda
+                {t("skipRound")}
               </Button>
             </div>
           </div>
@@ -110,7 +111,7 @@ export function PlayerView() {
 
       <aside className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Room
+          {t("room")}
         </h2>
         <PlayerList players={room.players} viewerId={viewerId} />
         <div className="pt-4">

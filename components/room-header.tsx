@@ -1,23 +1,26 @@
 "use client"
 
 import { useGame } from "@/lib/game-context"
+import { useLanguage } from "@/lib/language-context"
+import { LanguageSelector } from "@/components/language-selector"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Copy, LogOut, Sparkles } from "lucide-react"
+import { Copy, LogOut, Lock } from "lucide-react"
 import { toast } from "sonner"
 
 // Persistent header for any in-room screen.
 // Shows the room code (with copy), live status pill and a leave button.
 export function RoomHeader() {
   const { room, leaveRoom, viewAs } = useGame()
+  const { t } = useLanguage()
 
   if (!room) return null
 
   const statusLabel: Record<typeof room.status, string> = {
-    waiting: "Waiting for players",
-    ready: "Ready to start",
-    in_progress: "Round in progress",
-    round_finished: "Round finished",
+    waiting: t("waitingForPlayers"),
+    ready: t("readyToStart"),
+    in_progress: t("roundInProgress"),
+    round_finished: t("roundFinished"),
   }
 
   const statusColor: Record<typeof room.status, string> = {
@@ -30,9 +33,9 @@ export function RoomHeader() {
   const onCopy = async () => {
     try {
       await navigator.clipboard.writeText(room.code)
-      toast.success("Room code copied to clipboard")
+      toast.success(t("codeCopied"))
     } catch {
-      toast.error("Could not copy code")
+      toast.error(t("codeError"))
     }
   }
 
@@ -41,11 +44,11 @@ export function RoomHeader() {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Sparkles className="h-4 w-4" aria-hidden />
+            <Lock className="h-4 w-4" aria-hidden />
           </div>
           <div className="flex flex-col leading-tight">
             <span className="text-xs uppercase tracking-wider text-muted-foreground">
-              Word Hunt
+              {t("secretVerb")}
             </span>
             <span className="font-mono text-sm font-semibold tracking-wider">
               {room.code}
@@ -73,8 +76,9 @@ export function RoomHeader() {
             variant="outline"
             className="hidden rounded-full border-border bg-secondary/40 px-3 py-1 text-xs font-medium text-muted-foreground md:inline-flex"
           >
-            Viewing as {viewAs}
+            {t("viewingAs")} {viewAs}
           </Badge>
+          <LanguageSelector />
           <Button
             variant="ghost"
             size="sm"
@@ -82,7 +86,7 @@ export function RoomHeader() {
             className="text-muted-foreground hover:text-destructive"
           >
             <LogOut className="mr-1.5 h-4 w-4" />
-            Leave
+            {t("leave")}
           </Button>
         </div>
       </div>

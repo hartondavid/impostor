@@ -1,16 +1,18 @@
 "use client"
 
 import { useGame } from "@/lib/game-context"
+import { useLanguage } from "@/lib/language-context"
 import { Button } from "@/components/ui/button"
 import { RoomHeader } from "@/components/room-header"
 import { PlayerList } from "@/components/player-list"
 import { CheckCircle2, RotateCcw, Trophy, XCircle } from "lucide-react"
 import { DelegateHostCard } from "@/components/delegate-host"
 
-// End-of-round screen. Shows whether the guesser won, the secret word,
+// End-of-round screen. Shows whether the guesser won, the secret verb,
 // the # of questions used, and a CTA to start a new round (rotates guesser).
 export function ResultsScreen() {
   const { room, newRound, viewerId } = useGame()
+  const { t } = useLanguage()
   const round = room?.currentRound
   if (!room || !round) return null
 
@@ -25,8 +27,8 @@ export function ResultsScreen() {
         <section className="space-y-5">
           <div
             className={`relative overflow-hidden rounded-2xl border p-8 ${won
-                ? "border-primary/40 bg-primary/5"
-                : "border-destructive/40 bg-destructive/5"
+              ? "border-primary/40 bg-primary/5"
+              : "border-destructive/40 bg-destructive/5"
               }`}
           >
             <div
@@ -39,33 +41,33 @@ export function ResultsScreen() {
                 {won ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
                     <Trophy className="h-3.5 w-3.5" />
-                    Guesser wins!
+                    {t("guesserWins")}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-destructive">
                     <XCircle className="h-3.5 w-3.5" />
-                    So close!
+                    {t("soClose")}
                   </span>
                 )}
               </div>
 
               <h1 className="mt-4 text-pretty text-4xl font-semibold sm:text-5xl">
-                {won ? `${guesser?.name ?? "Guesser"} cracked it.` : "Better luck next round."}
+                {won ? `${guesser?.name ?? "Guesser"} ${t("guessedIt")}` : t("missingVerb")}
               </h1>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <ResultStat
-                  label="Secret word"
+                  label={t("secretWord")}
                   value={round.word}
                   mono
                 />
-                <ResultStat label="Suggestions skipped" value={String(skipped)} />
+                <ResultStat label={t("suggestionsSkipped")} value={String(skipped)} />
               </div>
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button onClick={newRound} size="lg">
                   <RotateCcw className="mr-2 h-4 w-4" />
-                  Next Round
+                  {t("nextRound")}
                 </Button>
               </div>
             </div>
@@ -74,7 +76,7 @@ export function ResultsScreen() {
           {round.definition && (
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Definition
+                {t("definition")}
               </h3>
               <p className="mt-2 text-pretty text-sm leading-relaxed">
                 {round.definition}
@@ -85,7 +87,7 @@ export function ResultsScreen() {
 
         <aside className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Scoreboard
+            {t("scoreboard")}
           </h2>
           <PlayerList
             players={[...room.players].sort((a, b) => b.score - a.score)}

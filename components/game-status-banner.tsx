@@ -1,6 +1,7 @@
 "use client"
 
 import type { ViewAs } from "@/lib/types"
+import { useLanguage } from "@/lib/language-context"
 import { Crown, Eye, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -17,6 +18,7 @@ export function GameStatusBanner({
   title,
   subtitle,
 }: GameStatusBannerProps) {
+  const { t } = useLanguage()
   const config = {
     host: {
       icon: Crown,
@@ -24,7 +26,7 @@ export function GameStatusBanner({
       glow: "from-accent/20",
       pill: "bg-accent/15 text-accent border-accent/30",
       iconColor: "text-accent",
-      label: "Host",
+      label: t("host"),
     },
     guesser: {
       icon: Eye,
@@ -32,7 +34,7 @@ export function GameStatusBanner({
       glow: "from-destructive/20",
       pill: "bg-destructive/15 text-destructive border-destructive/30",
       iconColor: "text-destructive",
-      label: "Guesser",
+      label: t("guesser"),
     },
     player: {
       icon: Users,
@@ -40,7 +42,7 @@ export function GameStatusBanner({
       glow: "from-primary/20",
       pill: "bg-primary/15 text-primary border-primary/30",
       iconColor: "text-primary",
-      label: "Player",
+      label: t("player"),
     },
   }[viewAs]
 
@@ -76,7 +78,7 @@ export function GameStatusBanner({
               config.pill,
             )}
           >
-            You are the {config.label}
+            {t("youAreThe")} {config.label}
           </span>
           <h2 className="mt-2 text-pretty text-xl font-semibold leading-snug sm:text-2xl">
             {title}

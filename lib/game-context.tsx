@@ -27,6 +27,8 @@ import {
 } from "./mock-data"
 import { supabase } from "./supabase"
 import { useSession } from "@/hooks/use-session"
+import { useLanguage } from "@/lib/language-context"
+import { toast } from "sonner"
 
 // ---------- State shape ----------
 
@@ -66,17 +68,16 @@ interface GameContextValue extends GameState {
   delegateHost: (playerId: string) => Promise<void>
   startRound: (
     word: string,
-    definition: string,
     questions: string[],
     source: WordSource,
+    gameLanguage: "en" | "ro"
   ) => Promise<void>
   skipQuestion: () => Promise<void>
   guessedCorrectly: () => Promise<void>
   forceEndRound: () => Promise<void>
   newRound: () => Promise<void>
-  generateWord: (word?: string) => Promise<{
+  generateWord: (word?: string, langOverride?: "en" | "ro") => Promise<{
     word: string
-    definition: string
     questions: string[]
     fallback?: boolean
   } | null>
@@ -123,6 +124,7 @@ function pickNextGuesser(room: Room): { player: Player; cycleReset: boolean } {
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const { playerId, isLoaded } = useSession()
+  const { language } = useLanguage()
   const [state, setState] = useState<GameState>(initialState)
 
   // Use a ref to access the latest state inside callbacks without triggering re-renders or stale closures
@@ -189,6 +191,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
         "postgres_changes",
         { event: "*", schema: "public", table: "game_rooms", filter: `room_code=eq.${roomCode}` },
         (payload) => {
+          if (payload.eventType === "DELETE") {
+            setState((prev) => ({ ...prev, room: null, screen: "landing" }))
+            localStorage.removeItem("wg_room_code")
+            localStorage.removeItem("wg_user_name")
+            toast.error("The room was closed.")
+            return
+          }
+
           const newDbRoom = payload.new as any
           if (!newDbRoom || !newDbRoom.room_code) return
 
@@ -224,11 +234,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const room = stateRef.current.room
       const meId = stateRef.current.viewerId
       if (!room || !meId || !supabase) return
-
       const remainingPlayers = room.players.filter((p) => p.id !== meId)
 
-      if (remainingPlayers.length === 0) {
-        // Last player leaving, delete the entire room
+      if (remainingPlayers.length === 0 || (remainingPlayers.length === 1 && meId === room.hostId)) {
+        // Last player leaving, or the host left and only 1 player remains
         supabase.from("game_rooms").delete().eq("room_code", room.code).then()
       } else {
         // Someone else is still there
@@ -239,17 +248,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
         // 1. If the leaving player was the host, we must crown a new one
         if (meId === room.hostId) {
-          const nextHost = remainingPlayers[0]
+          // Find the last player who is NOT the guesser
+          const eligibleHosts = remainingPlayers.filter(p => p.id !== room.currentRound?.guesserId)
+          const nextHost = eligibleHosts[eligibleHosts.length - 1] || remainingPlayers[0]
           nextHostId = nextHost.id
           updatedPlayers = remainingPlayers.map((p) =>
             p.id === nextHostId ? { ...p, isHost: true } : p
           )
         }
 
-        // 2. If the leaving player was the guesser during a round, reset the game state
-        if (meId === room.currentRound?.guesserId && room.status === "in_progress") {
-          nextStatus = "ready"
-          nextRound = undefined
+        // 2. If the guesser left, reset the game state because the game cannot continue
+        if (meId === room.currentRound?.guesserId) {
+          if (room.status === "in_progress") {
+            nextStatus = "ready"
+            nextRound = undefined
+          }
+          updatedPlayers = updatedPlayers.map(p => ({ ...p, isGuesser: false }))
         }
 
         // Update the room with the new player list, host, and potentially reset status
@@ -335,7 +349,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
 
       setState((prev) => ({ ...prev, viewerId: host.id }))
-      
+
       // Persist for refresh
       localStorage.setItem("wg_room_code", room.code)
       localStorage.setItem("wg_user_name", normalizedName)
@@ -354,12 +368,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       const newPlayerId = `p_${normalizedName.toLowerCase()}`
 
-      // Fetch current room state first to append
-      const { data, error } = await supabase.from("game_rooms").select("*").eq("room_code", upperCode).single()
-      if (error || !data) {
-        console.error(`Room not found or error fetching room: [${error?.code}] ${error?.message} - ${error?.details}`)
+      // Fetch current room state first to append. Avoid .single() to prevent PGRST116 if multiple/0 rows
+      const { data: rows, error } = await supabase.from("game_rooms").select("*").eq("room_code", upperCode)
+
+      if (error || !rows || rows.length === 0) {
+        console.error(`Room not found or error fetching room:`, error)
+
+        toast.error("Camera nu a fost găsită. Verifică codul sau creează o cameră nouă.")
+        localStorage.removeItem("wg_room_code")
+        localStorage.removeItem("wg_user_name")
         return
       }
+
+      const data = rows[0]
 
       const currentPlayers: Player[] = data.players || []
       const existingPlayer = currentPlayers.find(p => p.id === newPlayerId)
@@ -466,8 +487,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     // Determine local navigation
     const nextViewAs = stateRef.current.viewerId === playerId ? "host" : "player"
-    const nextScreen = shouldReset 
-      ? ("host_setup" as Screen) 
+    const nextScreen = shouldReset
+      ? ("host_setup" as Screen)
       : (nextViewAs === "player" ? "lobby" as Screen : undefined)
 
     // 1. Optimistic local update (Instant UI flip)
@@ -498,7 +519,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         current_round: newRoom.currentRound || null,
         past_rounds: newRoom.pastRounds,
       })
-      
+
       if (error) {
         console.error("Failed to delegate host in DB:", error)
         toast.error("Eroare la sincronizarea cu serverul.")
@@ -509,7 +530,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const startRound = useCallback(
-    async (word: string, definition: string, questions: string[], source: WordSource) => {
+    async (word: string, questions: string[], source: WordSource, gameLanguage: "en" | "ro") => {
       const room = stateRef.current.room
       if (!room) return
 
@@ -519,8 +540,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const round: Round = {
         id: `r_${Math.random().toString(36).slice(2, 9)}`,
         word: word.toLowerCase(),
-        definition,
         source,
+        language: gameLanguage,
         guesserId: guesser.id,
         questions: makeQuestionItems(questions),
         currentQuestionIndex: 0,
@@ -665,8 +686,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       try {
         const remainingPlayers = room.players.filter((p) => p.id !== meId)
 
-        if (remainingPlayers.length === 0) {
-          // Last player is leaving, delete the entire room
+        if (remainingPlayers.length === 0 || (remainingPlayers.length === 1 && meId === room.hostId)) {
+          // Last player leaving, or the host left and only 1 player remains
           await supabase.from("game_rooms").delete().eq("room_code", room.code)
         } else {
           // Someone else is still there
@@ -677,17 +698,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
           // 1. If the leaving player was the host, we must crown a new one
           if (meId === room.hostId) {
-            const nextHost = remainingPlayers[0]
+            // Find the last player who is NOT the guesser
+            const eligibleHosts = remainingPlayers.filter(p => p.id !== room.currentRound?.guesserId)
+            const nextHost = eligibleHosts[eligibleHosts.length - 1] || remainingPlayers[0]
             nextHostId = nextHost.id
             updatedPlayers = remainingPlayers.map((p) =>
               p.id === nextHostId ? { ...p, isHost: true } : p
             )
           }
 
-          // 2. If the leaving player was the guesser during a round, reset the game state
-          if (meId === room.currentRound?.guesserId && room.status === "in_progress") {
-            nextStatus = "ready"
-            nextRound = undefined
+          // 2. If the guesser left, reset the game state because the game cannot continue
+          if (meId === room.currentRound?.guesserId) {
+            if (room.status === "in_progress") {
+              nextStatus = "ready"
+              nextRound = undefined
+            }
+            updatedPlayers = updatedPlayers.map(p => ({ ...p, isGuesser: false }))
           }
 
           // Update the room with the new player list, host, and potentially reset status
@@ -718,7 +744,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       await new Promise(r => setTimeout(r, 600))
 
       const usedTexts = new Set(room.currentRound.questions.map(q => q.text))
-      const available = QUESTION_POOL.filter(text => !usedTexts.has(text))
+      const targetLang = room.currentRound.language || language
+      const available = QUESTION_POOL[targetLang].filter(text => !usedTexts.has(text))
 
       if (available.length === 0) return
 
@@ -745,16 +772,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const generateWord = useCallback(async (word?: string) => {
+  const generateWord = useCallback(async (word?: string, langOverride?: "en" | "ro") => {
     setState((prev) => ({ ...prev, isGeneratingWord: true, genError: null }))
     try {
       // Small delay for realism
       await new Promise(r => setTimeout(r, 800))
 
-      const local = generateLocalRound(word)
+      const local = generateLocalRound(word, langOverride || language)
       return {
         word: local.word,
-        definition: local.definition,
         questions: local.questions,
         fallback: false,
       }
@@ -767,13 +793,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo<GameContextValue>(() => {
-    const guesser = state.room?.players.find((p) => p.isGuesser) ?? null
-    const viewer = state.room?.players.find((p) => p.id === state.viewerId) ?? null
+    const guesser = state.room?.players.find((p: any) => p.isGuesser) ?? null
+    const viewer = state.room?.players.find((p: any) => p.id === state.viewerId) ?? null
     const round = state.room?.currentRound
     const currentQuestion = round && round.questions[round.currentQuestionIndex]
       ? round.questions[round.currentQuestionIndex]
       : null
-    const remainingQuestions = round ? round.questions.filter((q) => !q.used && !q.skipped).length : 0
+    const remainingQuestions = round ? round.questions.filter((q: QuestionItem) => !q.used && !q.skipped).length : 0
 
     return {
       ...state,

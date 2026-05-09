@@ -13,15 +13,34 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Word Hunt — multiplayer party game",
+  title: "Secret Verb — Multiplayer party game",
   description:
     "A real-time multiplayer word-guessing game with AI-crafted hints. Create a room, invite friends, take turns being the Guesser.",
   generator: "v0.app",
+  openGraph: {
+    title: "Secret Verb — Multiplayer party game",
+    description: "A real-time multiplayer word-guessing game with AI-crafted hints. Create a room, invite friends, take turns being the Guesser.",
+    type: "website",
+    images: [
+      {
+        url: "/social.png",
+        width: 1200,
+        height: 630,
+        alt: "Secret Verb Game",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Secret Verb — Multiplayer party game",
+    description: "A real-time multiplayer word-guessing game with AI-crafted hints. Create a room, invite friends, take turns being the Guesser.",
+    images: ["/social.png"],
+  },
   icons: {
     icon: [
       { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
       { url: "/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/svg+xml" },
     ],
     apple: "/apple-icon.png",
   },

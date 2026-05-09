@@ -1,6 +1,7 @@
 "use client"
 
 import { useGame } from "@/lib/game-context"
+import { useLanguage } from "@/lib/language-context"
 import { Button } from "@/components/ui/button"
 import { PlayerList } from "@/components/player-list"
 import { RoomHeader } from "@/components/room-header"
@@ -22,6 +23,7 @@ export function Lobby() {
     startRound,
     isGeneratingWord,
   } = useGame()
+  const { t } = useLanguage()
 
   if (!room) return null
 
@@ -31,7 +33,7 @@ export function Lobby() {
 
   const onStart = () => {
     if (room.players.length < 2) {
-      toast.error("Need at least 2 players to start")
+      toast.error(t("needMorePlayers"))
       return
     }
     assignGuesser()
@@ -49,23 +51,23 @@ export function Lobby() {
           <div className="rounded-2xl border border-border bg-card p-6">
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/40 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Lobby
+              {t("lobby")}
             </span>
             <h1 className="mt-3 text-pretty text-3xl font-semibold sm:text-4xl">
-              Share your room code, then start the hunt.
+              {t("shareRoomCode")}
             </h1>
             <p className="mt-2 text-pretty text-muted-foreground">
-              Odată ce toată lumea e în sală, gazda alege un Ghicitor și un cuvânt secret.{" "}
-              <span className="text-foreground">Jucătorii află cine ghicește abia când runda pornește.</span>
+              {t("lobbyDesc1")} {" "}
+              <span className="text-foreground">{t("lobbyDesc2")}</span>
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <StatTile label="Players" value={String(playersLocal)} />
+              <StatTile label={t("players")} value={String(playersLocal)} />
               <StatTile
-                label="Status"
-                value={room.status === "waiting" ? "Waiting" : "Ready"}
+                label={t("status")}
+                value={room.status === "waiting" ? t("waiting") : t("ready")}
               />
-              <StatTile label="Rounds played" value={String(room.pastRounds.length)} />
+              <StatTile label={t("roundsPlayed")} value={String(room.pastRounds.length)} />
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
@@ -73,7 +75,7 @@ export function Lobby() {
                 <>
                   <Button onClick={onStart} size="lg">
                     <Play className="mr-2 h-4 w-4" />
-                    Start game
+                    {t("startGame")}
                   </Button>
                 </>
               )}
@@ -81,7 +83,7 @@ export function Lobby() {
                 <div className="flex w-full flex-col gap-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Spinner className="h-4 w-4" />
-                    Waiting for host {host?.name} to start the game…
+                    {t("waitingForHost")} {host?.name} {t("toStartGame")}
                   </div>
                 </div>
               )}
@@ -95,10 +97,10 @@ export function Lobby() {
         <aside className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              In the room
+              {t("inTheRoom")}
             </h2>
             <span className="font-mono text-xs text-muted-foreground">
-              {playersLocal} connected
+              {playersLocal} {t("connected")}
             </span>
           </div>
           <PlayerList

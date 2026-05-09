@@ -7,6 +7,7 @@ import { HostSetup } from "@/components/host-setup"
 import { InGame } from "@/components/in-game"
 import { ResultsScreen } from "@/components/results-modal"
 import { Toaster } from "@/components/ui/sonner"
+import { LanguageProvider } from "@/lib/language-context"
 
 // Top-level shell that switches screens based on the game state machine.
 function GameShell() {
@@ -29,9 +30,11 @@ function GameShell() {
 
 export default function Page() {
   return (
-    <GameProvider>
-      <GameShell />
-      <Toaster richColors theme="dark" position="top-center" />
-    </GameProvider>
+    <LanguageProvider>
+      <GameProvider>
+        <GameShell />
+        <Toaster richColors theme="dark" position="top-center" />
+      </GameProvider>
+    </LanguageProvider>
   )
 }

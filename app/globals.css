@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
-  Word Hunt – modern multiplayer party game theme.
+  Secret Verb - Modern multiplayer party game theme.
   Palette (5 colors total):
   - background: deep navy
   - foreground: warm off-white
@@ -130,6 +130,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }

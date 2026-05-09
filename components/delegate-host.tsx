@@ -1,12 +1,14 @@
 "use client"
 
 import { useGame } from "@/lib/game-context"
+import { useLanguage } from "@/lib/language-context"
 import { Player } from "@/lib/types"
 import { Crown } from "lucide-react"
 import { toast } from "sonner"
 
 export function DelegateHostCard() {
   const { room, viewerId, delegateHost } = useGame()
+  const { t } = useLanguage()
 
   if (!room) return null
 
@@ -17,17 +19,17 @@ export function DelegateHostCard() {
 
   const onDelegateHost = async (player: Player) => {
     await delegateHost(player.id)
-    toast.success(`${player.name} este noul host!`)
+    toast.success(`${player.name} ${t("newHostSuccess")}`)
   }
 
   return (
     <div className="rounded-2xl border border-accent/20 bg-accent/5 p-4 space-y-3">
       <div className="flex items-center gap-2">
         <Crown className="h-4 w-4 text-accent" />
-        <h3 className="text-sm font-semibold text-accent">Deleagă rolul de gazdă</h3>
+        <h3 className="text-sm font-semibold text-accent">{t("delegateHost")}</h3>
       </div>
       <p className="text-xs text-muted-foreground">
-        Deleagă rolul de gazdă unui alt jucător.
+        {t("delegateHostDesc")}
       </p>
       <ul className="flex flex-col gap-2">
         {delegateCandidates.map((p) => (

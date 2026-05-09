@@ -1,6 +1,7 @@
 "use client"
 
 import type { Player } from "@/lib/types"
+import { useLanguage } from "@/lib/language-context"
 import { Crown, Eye, Wifi } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -28,6 +29,7 @@ export function PlayerList({
   hideGuesserBadge = false,
   rowAction,
 }: PlayerListProps) {
+  const { t } = useLanguage()
   return (
     <ul role="list" className="flex flex-col gap-2">
       {players.map((p) => {
@@ -73,24 +75,24 @@ export function PlayerList({
                   {p.name}
                   {isViewer && (
                     <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-                      You
+                      {t("you")}
                     </span>
                   )}
                 </span>
                 <span className="flex items-center gap-2 text-xs text-muted-foreground">
                   {p.isHost && (
                     <span className="inline-flex items-center gap-1 text-accent">
-                      <Crown className="h-3 w-3" /> Host
+                      <Crown className="h-3 w-3" /> {t("host")}
                     </span>
                   )}
                   {showGuesser && (
                     <span className="inline-flex items-center gap-1 text-destructive">
-                      <Eye className="h-3 w-3" /> Ghicitor
+                      <Eye className="h-3 w-3" /> {t("guesser")}
                     </span>
                   )}
                   {!p.isHost && !showGuesser && (
                     <span className="inline-flex items-center gap-1">
-                      <Wifi className="h-3 w-3" /> Jucător
+                      <Wifi className="h-3 w-3" /> {t("player")}
                     </span>
                   )}
                 </span>
@@ -98,7 +100,7 @@ export function PlayerList({
 
               {asked && (
                 <span className="rounded-md border border-border bg-secondary/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Asked
+                  {t("asked")}
                 </span>
               )}
 
