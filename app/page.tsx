@@ -8,6 +8,7 @@ import { InGame } from "@/components/in-game"
 import { ResultsScreen } from "@/components/results-modal"
 import { Toaster } from "@/components/ui/sonner"
 import { LanguageProvider } from "@/lib/language-context"
+import { SplashGate } from "@/components/splash-screen"
 
 // Top-level shell that switches screens based on the game state machine.
 function GameShell() {
@@ -32,7 +33,9 @@ export default function Page() {
   return (
     <LanguageProvider>
       <GameProvider>
-        <GameShell />
+        <SplashGate>
+          <GameShell />
+        </SplashGate>
         <Toaster richColors theme="dark" position="top-center" />
       </GameProvider>
     </LanguageProvider>

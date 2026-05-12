@@ -21,11 +21,14 @@ export function PlayerView() {
   const round = room?.currentRound
   if (!room || !round) return null
 
+  const isHostPlayer = Boolean(viewer?.isHost)
+  const bannerViewAs = isHostPlayer ? "host" : "player"
+
   return (
     <main className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_320px]">
       <section className="space-y-5">
         <GameStatusBanner
-          viewAs="player"
+          viewAs={bannerViewAs}
           title={t("playerTitle")}
           subtitle={`${guesser?.name ?? t("playerSubtitle2")} ${t("playerSubtitle1")}`}
         />

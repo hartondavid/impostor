@@ -15,16 +15,15 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
-import { Sparkles, Type, AlertCircle, Shuffle, UserCheck, Crown } from "lucide-react"
+import { Sparkles, AlertCircle, Shuffle, UserCheck } from "lucide-react"
 import { toast } from "sonner"
 import type { Player } from "@/lib/types"
 import { DelegateHostCard } from "@/components/delegate-host"
-import { VERB_POOL } from "@/lib/mock-data"
 
 // Host-only screen for choosing the secret verb and managing players.
 // Three panels:
 //  1) Guesser selection — random roll or manual pick from the list
-//  2) Word configuration — AI-generate or type manually
+//  2) Word configuration — optional typed seed or empty + Generate + Start round
 //  3) Delegate host — transfer the host crown to someone else
 export function HostSetup() {
   const {
@@ -37,15 +36,12 @@ export function HostSetup() {
     startRound,
     assignGuesser,
     setGuesser,
-    delegateHost,
   } = useGame()
 
   const { t, language } = useLanguage()
-  const [mode, setMode] = useState<"auto" | "manual">("auto")
-  const [manualWord, setManualWord] = useState("")
   const [guesserMode, setGuesserMode] = useState<"random" | "pick">("random")
   const [gameLanguage, setGameLanguage] = useState<"en" | "ro">(language as "en" | "ro")
-  const [aiPreview, setAiPreview] = useState<{ word: string, questions: string[], language: "en" | "ro" } | null>(null)
+  const [autoVerbSeed, setAutoVerbSeed] = useState("")
 
   if (!room) return null
   const isViewerHost = room.hostId === viewerId
@@ -53,46 +49,37 @@ export function HostSetup() {
   // Players eligible to be guesser (anyone except the current host)
   const eligiblePlayers = room.players.filter((p) => p.id !== room.hostId)
 
-  const onGenerate = async () => {
-    if (!guesser) return
-    const result = await generateWord(undefined, gameLanguage)
-    if (!result) {
-      toast.error(t("hostGenErrorFallback"))
-      return
-    }
-    toast.success(t("hostWordSelected"))
-    startRound(result.word, result.questions, "random", gameLanguage)
-  }
-
   const onGeneratePreview = async () => {
     if (!guesser) return
-    const result = await generateWord(undefined, gameLanguage)
+    const result = await generateWord(autoVerbSeed.trim() || undefined, gameLanguage)
     if (!result) {
       toast.error(t("hostGenErrorFallback"))
       return
     }
     toast.success(t("hostWordSelected"))
-    setAiPreview({ ...result, language: gameLanguage })
+    setAutoVerbSeed(result.word)
   }
 
-  const onStartAiPreview = () => {
-    if (!aiPreview) return
-    startRound(aiPreview.word, aiPreview.questions, "random", aiPreview.language)
-  }
+  /**
+   * Secret verb always comes from the input at click time (min. 2 characters).
+   * Regenerates questions so edits after "Generate" still match the typed verb.
+   */
+  const onStartRound = async () => {
+    if (!guesser || isGeneratingWord) return
+    const trimmed = autoVerbSeed.trim()
+    if (trimmed.length < 2) return
 
-  const onManualStart = async () => {
-    if (!guesser) return
-    if (manualWord.trim().length < 2) {
-      toast.error(t("hostMinLengthError"))
-      return
-    }
-    const result = await generateWord(manualWord, gameLanguage)
+    const result = await generateWord(trimmed, gameLanguage)
     if (!result) {
       toast.error(t("hostGenErrorFallback"))
       return
     }
+    setAutoVerbSeed(result.word)
     startRound(result.word, result.questions, "manual", gameLanguage)
   }
+
+  const trimmedVerb = autoVerbSeed.trim()
+  const canStartRound = !!guesser && !isGeneratingWord && trimmedVerb.length >= 2
 
   // ── Guesser handlers ──
   const onRandomGuesser = async () => {
@@ -220,110 +207,49 @@ export function HostSetup() {
           <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
             <h2 className="font-semibold text-base">{t("hostChooseWord")}</h2>
 
-            <div className="grid gap-2 sm:grid-cols-2">
-              <ModeTile
-                active={mode === "auto"}
-                onClick={() => setMode("auto")}
-                icon={<Sparkles className="h-4 w-4 text-primary" />}
-                title={t("hostGenerateRandom")}
-                description={t("hostGenerateRandomDesc")}
-              />
-              <ModeTile
-                active={mode === "manual"}
-                onClick={() => setMode("manual")}
-                icon={<Type className="h-4 w-4 text-accent" />}
-                title={t("hostInputManual")}
-                description={t("hostInputManualDesc")}
-              />
+            <div className="space-y-4">
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="ai-verb-seed">{t("hostVerbOrGenerate")}</FieldLabel>
+                  <Input
+                    id="ai-verb-seed"
+                    placeholder={t("hostVerbPlaceholderOptional")}
+                    value={autoVerbSeed}
+                    onChange={(e) => setAutoVerbSeed(e.target.value)}
+                    maxLength={48}
+                  />
+                  <FieldDescription>{t("hostVerbOrGenerateHint")}</FieldDescription>
+                </Field>
+              </FieldGroup>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onGeneratePreview}
+                disabled={isGeneratingWord || !guesser}
+                className="w-full sm:w-fit"
+              >
+                {isGeneratingWord ? (
+                  <Spinner className="mr-2 h-4 w-4" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                {t("hostGenerateWord")}
+              </Button>
+
+              <Button
+                onClick={() => void onStartRound()}
+                disabled={!canStartRound}
+                size="lg"
+                className="w-full sm:w-fit"
+              >
+                {t("hostGenAndStart")}
+              </Button>
             </div>
 
-            <div className="mt-2">
-              {mode === "manual" ? (
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="word">{t("hostSecretWord")}</FieldLabel>
-                    <Input
-                      id="word"
-                      placeholder={t("hostWordPlaceholder")}
-                      value={manualWord}
-                      onChange={(e) => setManualWord(e.target.value)}
-                      maxLength={24}
-                      autoFocus
-                    />
-                    <FieldDescription>
-                      {t("hostWordHint")}
-                    </FieldDescription>
-                  </Field>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const pool = VERB_POOL[gameLanguage] || VERB_POOL["en"]
-                      const randomWord = pool[Math.floor(Math.random() * pool.length)]
-                      setManualWord(randomWord)
-                    }}
-                    className="w-fit"
-                  >
-                    <Shuffle className="mr-2 h-4 w-4" />
-                    {t("hostChooseRandom")}
-                  </Button>
-                  <Button
-                    onClick={onManualStart}
-                    disabled={isGeneratingWord || manualWord.trim().length < 2 || !guesser}
-                    size="lg"
-                    className="mt-2"
-                  >
-                    {isGeneratingWord && <Spinner className="mr-2 h-4 w-4" />}
-                    {t("hostStartWithWord")}
-                  </Button>
-                  {!guesser && (
-                    <p className="text-xs text-destructive mt-1">{t("hostPickGuesserFirst")}</p>
-                  )}
-                </FieldGroup>
-              ) : (
-                <div className="space-y-4 pt-1">
-                  <p className="text-sm text-muted-foreground">
-                    {t("hostGenWaitDesc")}
-                  </p>
-
-                  {aiPreview && (
-                    <div className="p-4 rounded-xl border border-border bg-secondary/40">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t("hostSecretWord")}</p>
-                      <p className="font-bold text-lg">{aiPreview.word}</p>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col items-start gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={onGeneratePreview}
-                      disabled={isGeneratingWord}
-                      className="w-fit"
-                    >
-                      {isGeneratingWord ? (
-                        <Spinner className="mr-2 h-4 w-4" />
-                      ) : (
-                        <Shuffle className="mr-2 h-4 w-4" />
-                      )}
-                      {t("hostGenerateWord")}
-                    </Button>
-
-                    <Button
-                      onClick={onStartAiPreview}
-                      disabled={!aiPreview || !guesser || isGeneratingWord}
-                      size="lg"
-                      className="w-fit"
-                    >
-                      {t("hostGenAndStart")}
-                    </Button>
-                  </div>
-                  {!guesser && (
-                    <p className="text-xs text-destructive mt-2">{t("hostPickGuesserFirst")}</p>
-                  )}
-                </div>
-              )}
-            </div>
+            {!guesser && (
+              <p className="text-xs text-destructive">{t("hostPickGuesserFirst")}</p>
+            )}
 
             {genError && (
               <div className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">

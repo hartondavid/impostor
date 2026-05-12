@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
+import { PwaRegister } from "@/components/pwa-register"
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -13,10 +13,19 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
+  applicationName: "Secret Verb",
   title: "Secret Verb — Multiplayer party game",
   description:
     "A real-time multiplayer word-guessing game with AI-crafted hints. Create a room, invite friends, take turns being the Guesser.",
   generator: "v0.app",
+  appleWebApp: {
+    capable: true,
+    title: "Secret Verb",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+  },
   openGraph: {
     title: "Secret Verb — Multiplayer party game",
     description: "A real-time multiplayer word-guessing game with AI-crafted hints. Create a room, invite friends, take turns being the Guesser.",
@@ -64,8 +73,8 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} bg-background dark`}
     >
       <body className="font-sans antialiased">
+        <PwaRegister />
         {children}
-        {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>
   )

@@ -24,16 +24,31 @@ import {
 import {
   ArrowRight,
   Brain,
+  Download,
   Lock,
+  Menu,
   Users,
+  Wallet,
   Zap,
 } from "lucide-react"
+import { toast } from "sonner"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useInstallAppPrompt } from "@/hooks/use-install-app-prompt"
+import { LandingHeroTagline } from "@/components/landing-hero-tagline"
+import { GreenParticlesBackground } from "@/components/green-particles"
 
-// Public landing page — entry point. Two CTAs: create / join a room.
+const REVOLUT_SUPPORT_URL =
+  process.env.NEXT_PUBLIC_REVOLUT_SUPPORT_URL ?? "https://revolut.me/david1498"
 // Designed to feel like a modern multiplayer party game.
 export function Landing() {
   const { createRoom, joinRoom } = useGame()
   const { t } = useLanguage()
+  const install = useInstallAppPrompt()
   const [hostName, setHostName] = useState("")
   const [joinCode, setJoinCode] = useState("")
   const [joinName, setJoinName] = useState("")
@@ -41,33 +56,71 @@ export function Landing() {
   const [joinOpen, setJoinOpen] = useState(false)
 
   return (
-    <div className="bg-grid relative min-h-screen overflow-hidden">
+    <div className="bg-grid relative isolate min-h-screen overflow-hidden">
+      <GreenParticlesBackground density="landing" className="z-0" />
       {/* Soft glow accents */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-32 left-1/2 h-96 w-[80%] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
+        className="pointer-events-none absolute -top-32 left-1/2 z-[1] h-96 w-[80%] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-0 right-0 h-72 w-72 rounded-full bg-accent/10 blur-3xl"
+        className="pointer-events-none absolute bottom-0 right-0 z-[1] h-72 w-72 rounded-full bg-accent/10 blur-3xl"
       />
 
-      <header className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-6 sm:px-6">
+      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-4 py-6 sm:px-6">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Lock className="h-4 w-4" />
           </div>
           <span className="font-semibold tracking-tight">{t("secretVerb")}</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <span className="hidden text-xs text-muted-foreground sm:block">
             {t("subtitle")}
           </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0 border-border bg-card/60"
+                aria-label={t("landingMenu")}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[12rem]">
+              <DropdownMenuItem
+                onSelect={(ev) => {
+                  ev.preventDefault()
+                  void install.triggerInstall().then((ok) => {
+                    if (!ok) toast.message(t("installAppHint"))
+                  })
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {t("downloadApp")}
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href={REVOLUT_SUPPORT_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex cursor-pointer items-center"
+                >
+                  <Wallet className="mr-2 h-4 w-4" />
+                  {t("supportRevolut")}
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <LanguageSelector />
         </div>
       </header>
 
-      <main className="relative mx-auto flex max-w-6xl flex-col items-center px-4 py-12 sm:px-6 sm:py-20">
+      <main className="relative z-10 mx-auto flex max-w-6xl flex-col items-center px-4 py-12 sm:px-6 sm:py-20">
         <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" />
           {t("poweredByAI")}
@@ -76,7 +129,7 @@ export function Landing() {
         <h1 className="text-balance text-center text-5xl font-semibold tracking-tight sm:text-6xl md:text-7xl">
           {t("guessTheWord")}
           <br />
-          <span className="text-primary">{t("outsmartFriends")}</span>
+          <LandingHeroTagline className="mt-1 block sm:mt-2" />
         </h1>
 
         <p className="mt-5 max-w-xl text-pretty text-center text-base text-muted-foreground sm:text-lg">

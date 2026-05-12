@@ -11,7 +11,7 @@ import { toast } from "sonner"
 // Persistent header for any in-room screen.
 // Shows the room code (with copy), live status pill and a leave button.
 export function RoomHeader() {
-  const { room, leaveRoom, viewAs } = useGame()
+  const { room, leaveRoom, viewAs, viewerId } = useGame()
   const { t } = useLanguage()
 
   if (!room) return null
@@ -66,6 +66,11 @@ export function RoomHeader() {
         </div>
 
         <div className="flex items-center gap-2">
+          {room.status === "in_progress" && viewerId === room.hostId && (
+            <Badge className="rounded-full border border-accent/40 bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
+              {t("youAreTheHostBadge")}
+            </Badge>
+          )}
           <Badge
             className={`hidden rounded-full px-3 py-1 text-xs font-medium sm:inline-flex ${statusColor[room.status]}`}
           >

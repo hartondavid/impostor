@@ -13,7 +13,7 @@ export function DelegateHostCard() {
   if (!room) return null
 
   const isViewerHost = room.hostId === viewerId
-  const delegateCandidates = room.players.filter((p) => !p.isHost)
+  const delegateCandidates = room.players.filter((p) => !p.isHost && !p.isGuesser)
 
   if (!isViewerHost || delegateCandidates.length === 0) return null
 
