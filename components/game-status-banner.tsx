@@ -28,13 +28,13 @@ export function GameStatusBanner({
       iconColor: "text-accent",
       label: t("host"),
     },
-    guesser: {
+    impostor: {
       icon: Eye,
       ring: "ring-destructive/30",
       glow: "from-destructive/20",
       pill: "bg-destructive/15 text-destructive border-destructive/30",
       iconColor: "text-destructive",
-      label: t("guesser"),
+      label: t("impostor"),
     },
     player: {
       icon: Users,

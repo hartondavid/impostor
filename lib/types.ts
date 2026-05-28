@@ -1,6 +1,6 @@
-// Core entity types for the multiplayer word-guessing game.
+// Core entity types for The Impostor — a social deduction party game.
 
-export type RoomStatus = "waiting" | "ready" | "in_progress" | "round_finished"
+export type RoomStatus = "waiting" | "ready" | "in_progress" | "voting" | "round_finished"
 
 export type WordSource = "manual" | "random"
 
@@ -9,40 +9,55 @@ export interface Player {
   name: string
   avatarColor: string // tailwind-friendly accent for the avatar
   isHost: boolean
-  isGuesser: boolean
+  isImpostor: boolean
   connected: boolean
-  // Aggregated score across rounds (won rounds as guesser or assist)
+  // Aggregated score across rounds
   score: number
-  // Tracks whether this player has already been the guesser in the current cycle
-  hasBeenGuesser: boolean
+  // Tracks whether this player has already been the impostor in the current cycle
+  hasBeenImpostor: boolean
 }
 
-export interface QuestionItem {
+export interface WordPack {
   id: string
-  // The hint/question shown to the guesser to help them deduce the word
+  // The emoji/icon for the category
+  emoji: string
+  // The category name (shown to Impostor as their only clue)
+  category: string
+  // The specific secret word (shown to all players except the Impostor)
+  word: string
+}
+
+export interface SpokenWord {
+  id: string
+  playerId: string
   text: string
-  // Optional short definition or category attached to the hint
-  hint?: string
-  used: boolean
-  skipped: boolean
+  timestamp: number
 }
 
 export interface Round {
   id: string
-  // The secret verb for this round
+  // The secret word for this round
   word: string
+  // The category (shown to the Impostor as a clue)
+  category: string
+  // The emoji for the category
+  categoryEmoji: string
   source: WordSource
   language?: "en" | "ro"
-  // Short definition (often AI generated) shared with non-guessers
-  definition?: string
-  // The id of the player who is the guesser this round
-  guesserId: string
-  // Generated hints/questions visible to the guesser
-  questions: QuestionItem[]
-  // Index of the current visible question for the guesser
-  currentQuestionIndex: number
-  // Whether the guesser won this round
-  won?: boolean
+  // The id of the player who is the Impostor this round
+  impostorId: string
+  // Votes map: voterId -> targetId
+  votes: Record<string, string>
+  // Log of words/clues spoken during the round
+  spokenWords: SpokenWord[]
+  // Whether voting phase is active
+  votingOpen: boolean
+  // Whether the impostor correctly guessed the word at the end
+  impostorGuessedWord?: boolean
+  // The Impostor's last-chance guess text
+  impostorGuess?: string
+  // Whether the players caught the Impostor (majority vote)
+  impostorCaught?: boolean
   startedAt: number
   endedAt?: number
 }
@@ -50,7 +65,7 @@ export interface Round {
 export interface Room {
   code: string
   hostId: string
-  // The player who created the room — they can never become a guesser
+  // The player who created the room
   firstHostId: string
   status: RoomStatus
   players: Player[]
@@ -58,7 +73,6 @@ export interface Room {
   // History of completed rounds
   pastRounds: Round[]
   createdAt: number
-  // When true, the next newRound() call keeps the current guesser unchanged (host skipped the round)
   roundSkipped?: boolean
 }
 
@@ -68,7 +82,8 @@ export type Screen =
   | "lobby"
   | "host_setup"
   | "in_game"
+  | "voting"
   | "round_result"
 
 // In our demo the same browser can switch perspective between roles.
-export type ViewAs = "host" | "guesser" | "player"
+export type ViewAs = "host" | "impostor" | "player"

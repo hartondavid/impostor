@@ -37,7 +37,7 @@ export function PlayerList({
         const asked = askedIds?.has(p.id)
         const interactive = Boolean(onPlayerClick)
         const initial = p.name.charAt(0).toUpperCase()
-        const showGuesser = p.isGuesser && !hideGuesserBadge
+        const showImpostor = p.isImpostor && !hideGuesserBadge
 
         return (
           <li key={p.id}>
@@ -85,12 +85,12 @@ export function PlayerList({
                       <Crown className="h-3 w-3" /> {t("host")}
                     </span>
                   )}
-                  {showGuesser && (
+                  {showImpostor && (
                     <span className="inline-flex items-center gap-1 text-destructive">
-                      <Eye className="h-3 w-3" /> {t("guesser")}
+                      <Eye className="h-3 w-3" /> {t("impostor")}
                     </span>
                   )}
-                  {!p.isHost && !showGuesser && (
+                  {!p.isHost && !showImpostor && (
                     <span className="inline-flex items-center gap-1">
                       <Wifi className="h-3 w-3" /> {t("player")}
                     </span>

@@ -15,82 +15,70 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
-import { Sparkles, AlertCircle, Shuffle, UserCheck } from "lucide-react"
+import { Sparkles, AlertCircle, Shuffle, Users } from "lucide-react"
 import { toast } from "sonner"
-import type { Player } from "@/lib/types"
 import { DelegateHostCard } from "@/components/delegate-host"
+import { CATEGORIES_EN } from "@/lib/mock-data-en"
+import type { WordPack } from "@/lib/types"
 
-// Host-only screen for choosing the secret verb and managing players.
-// Three panels:
-//  1) Guesser selection — random roll or manual pick from the list
-//  2) Word configuration — optional typed seed or empty + Generate + Start round
-//  3) Delegate host — transfer the host crown to someone else
+// Host-only screen for choosing the secret word/category.
+// Guesser (Impostor) selection is now automatic and secret upon starting the round.
 export function HostSetup() {
   const {
     room,
     viewerId,
-    guesser,
     isGeneratingWord,
     genError,
     generateWord,
     startRound,
-    assignGuesser,
-    setGuesser,
   } = useGame()
 
   const { t, language } = useLanguage()
-  const [guesserMode, setGuesserMode] = useState<"random" | "pick">("random")
   const [gameLanguage, setGameLanguage] = useState<"en" | "ro">(language as "en" | "ro")
-  const [autoVerbSeed, setAutoVerbSeed] = useState("")
+  
+  // Word pack selection
+  const [selectedPack, setSelectedPack] = useState<WordPack | null>(null)
+  const [customWord, setCustomWord] = useState("")
+  const [customCategory, setCustomCategory] = useState("")
 
   if (!room) return null
   const isViewerHost = room.hostId === viewerId
 
-  // Players eligible to be guesser (anyone except the current host)
-  const eligiblePlayers = room.players.filter((p) => p.id !== room.hostId)
-
   const onGeneratePreview = async () => {
-    if (!guesser) return
-    const result = await generateWord(autoVerbSeed.trim() || undefined, gameLanguage)
+    const result = await generateWord(undefined, undefined, gameLanguage)
     if (!result) {
       toast.error(t("hostGenErrorFallback"))
       return
     }
     toast.success(t("hostWordSelected"))
-    setAutoVerbSeed(result.word)
+    setSelectedPack(result)
+    setCustomWord("")
+    setCustomCategory("")
   }
 
-  /**
-   * Secret verb always comes from the input at click time (min. 2 characters).
-   * Regenerates questions so edits after "Generate" still match the typed verb.
-   */
   const onStartRound = async () => {
-    if (!guesser || isGeneratingWord) return
-    const trimmed = autoVerbSeed.trim()
-    if (trimmed.length < 2) return
-
-    const result = await generateWord(trimmed, gameLanguage)
-    if (!result) {
-      toast.error(t("hostGenErrorFallback"))
+    if (room.players.length < 3) {
+      toast.error(t("hostMinPlayersError"))
       return
     }
-    setAutoVerbSeed(result.word)
-    startRound(result.word, result.questions, "manual", gameLanguage)
+
+    if (customWord.trim().length >= 2) {
+      const pack = await generateWord(customWord, customCategory, gameLanguage)
+      if (pack) {
+        startRound(pack, "manual", gameLanguage)
+      }
+      return
+    }
+
+    if (!selectedPack) {
+      toast.error(t("hostNoWordWarning"))
+      return
+    }
+
+    startRound(selectedPack, "random", gameLanguage)
   }
 
-  const trimmedVerb = autoVerbSeed.trim()
-  const canStartRound = !!guesser && !isGeneratingWord && trimmedVerb.length >= 2
-
-  // ── Guesser handlers ──
-  const onRandomGuesser = async () => {
-    await assignGuesser()
-    toast.success(t("hostRandomGuesserSuccess"))
-  }
-
-  const onPickGuesser = async (player: Player) => {
-    await setGuesser(player.id)
-    toast.success(`${player.name} ${t("hostGuesserSelected")}`)
-  }
+  const canStartRound = (selectedPack !== null) || (customWord.trim().length >= 2)
 
   if (!isViewerHost) {
     return (
@@ -111,22 +99,13 @@ export function HostSetup() {
       <RoomHeader />
       <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_340px]">
         <section className="space-y-6">
-          {/* ── Status banner ── */}
           <GameStatusBanner
             viewAs="host"
-            title={
-              isViewerHost
-                ? t("hostConfigureRound")
-                : `${t("hostIsDemo")} ${room.players.find((p) => p.isHost)?.name ?? "host"} (demo)`
-            }
-            subtitle={
-              guesser
-                ? `${t("hostCurrentGuesserDesc1")} ${guesser.name}. ${t("hostCurrentGuesserDesc2")}`
-                : t("hostNoGuesser")
-            }
+            title={t("hostConfigureRound")}
+            subtitle={t("hostStartRoundNote")}
           />
 
-          {/* ── Game Content Language selection panel ── */}
+          {/* Language selection */}
           <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
             <h2 className="font-semibold text-base">{t("hostDataLanguage")}</h2>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -147,109 +126,85 @@ export function HostSetup() {
             </div>
           </div>
 
-          {/* ── Guesser selection panel ── */}
-          <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
-            <h2 className="font-semibold text-base">{t("hostChooseGuesser")}</h2>
-
-            <div className="grid gap-2 sm:grid-cols-2">
-              <ModeTile
-                active={guesserMode === "random"}
-                onClick={() => setGuesserMode("random")}
-                icon={<Shuffle className="h-4 w-4 text-primary" />}
-                title={t("hostChooseRandom")}
-                description={t("hostRandomDesc")}
-              />
-              <ModeTile
-                active={guesserMode === "pick"}
-                onClick={() => setGuesserMode("pick")}
-                icon={<UserCheck className="h-4 w-4 text-accent" />}
-                title={t("hostChooseManual")}
-                description={t("hostManualDesc")}
-              />
-            </div>
-
-            {guesserMode === "random" ? (
-              <div className="pt-1">
-                {guesser && (
-                  <p className="mb-3 text-sm text-muted-foreground">
-                    {t("hostCurrentGuesserLabel")}{" "}
-                    <span className="font-semibold text-foreground">{guesser.name}</span>
-                  </p>
-                )}
-                <Button onClick={onRandomGuesser} variant="outline">
-                  <Shuffle className="mr-2 h-4 w-4" />
-                  {t("hostChooseRandom")}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2 pt-1">
-                <p className="text-xs text-muted-foreground">
-                  {t("hostClickToMakeGuesser")}
-                </p>
-                <PlayerList
-                  players={eligiblePlayers}
-                  viewerId={viewerId}
-                  onPlayerClick={onPickGuesser}
-                  hideGuesserBadge={false}
-                  rowAction={(p) =>
-                    p.isGuesser ? (
-                      <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-destructive">
-                        {t("hostPicked")}
-                      </span>
-                    ) : null
-                  }
-                />
-              </div>
-            )}
-          </div>
-
-          {/* ── Word selection panel ── */}
+          {/* Word selection panel */}
           <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
             <h2 className="font-semibold text-base">{t("hostChooseWord")}</h2>
 
             <div className="space-y-4">
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="ai-verb-seed">{t("hostVerbOrGenerate")}</FieldLabel>
+                  <FieldLabel htmlFor="custom-word">{t("hostWordOrGenerate")}</FieldLabel>
                   <Input
-                    id="ai-verb-seed"
+                    id="custom-word"
                     placeholder={t("hostVerbPlaceholderOptional")}
-                    value={autoVerbSeed}
-                    onChange={(e) => setAutoVerbSeed(e.target.value)}
+                    value={customWord}
+                    onChange={(e) => {
+                      setCustomWord(e.target.value)
+                      if (selectedPack) setSelectedPack(null)
+                    }}
                     maxLength={48}
                   />
                   <FieldDescription>{t("hostVerbOrGenerateHint")}</FieldDescription>
                 </Field>
+                
+                {customWord.trim().length >= 2 && (
+                  <Field>
+                    <FieldLabel htmlFor="custom-category">{t("hostCategoryLabel")}</FieldLabel>
+                    <Input
+                      id="custom-category"
+                      placeholder="e.g. Location, Object, Person..."
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      maxLength={24}
+                    />
+                    <FieldDescription>This is the only clue the Impostor will get.</FieldDescription>
+                  </Field>
+                )}
               </FieldGroup>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onGeneratePreview}
-                disabled={isGeneratingWord || !guesser}
-                className="w-full sm:w-fit"
-              >
-                {isGeneratingWord ? (
-                  <Spinner className="mr-2 h-4 w-4" />
-                ) : (
-                  <Sparkles className="mr-2 h-4 w-4" />
-                )}
-                {t("hostGenerateWord")}
-              </Button>
+              {!customWord && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onGeneratePreview}
+                  disabled={isGeneratingWord}
+                  className="w-full sm:w-fit"
+                >
+                  {isGeneratingWord ? (
+                    <Spinner className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Shuffle className="mr-2 h-4 w-4" />
+                  )}
+                  {t("hostGenerateWord")}
+                </Button>
+              )}
 
-              <Button
-                onClick={() => void onStartRound()}
-                disabled={!canStartRound}
-                size="lg"
-                className="w-full sm:w-fit"
-              >
-                {t("hostGenAndStart")}
-              </Button>
+              {selectedPack && !customWord && (
+                <div className="mt-4 p-4 rounded-xl border border-primary/30 bg-primary/5 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                      {selectedPack.category} {selectedPack.emoji}
+                    </div>
+                    <div className="text-xl font-bold">{selectedPack.word}</div>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-border">
+                <Button
+                  onClick={onStartRound}
+                  disabled={!canStartRound || room.players.length < 3}
+                  size="lg"
+                  className="w-full sm:w-fit bg-destructive hover:bg-destructive/90 text-white"
+                >
+                  <Sparkles className="mr-2 h-5 w-5" />
+                  {t("hostGenAndStart")}
+                </Button>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {t("hostGenAndStartDesc")}
+                </p>
+              </div>
             </div>
-
-            {!guesser && (
-              <p className="text-xs text-destructive">{t("hostPickGuesserFirst")}</p>
-            )}
 
             {genError && (
               <div className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
@@ -262,54 +217,31 @@ export function HostSetup() {
           </div>
         </section>
 
-        {/* ── Right sidebar: players + delegate host ── */}
         <aside className="space-y-6">
           <div className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              {t("playersCount")} ({room.players.length})
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("playersCount")} ({room.players.length})
+              </h2>
+            </div>
+            
+            {room.players.length < 3 && (
+              <div className="rounded-lg bg-destructive/10 p-3 text-xs text-destructive flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Need at least 3 players to play.
+              </div>
+            )}
+            
             <PlayerList
               players={room.players}
               viewerId={viewerId}
-              hideGuesserBadge={false}
+              hideGuesserBadge={true} // Nobody knows who it is yet!
             />
           </div>
 
-          {/* Delegate host section — only shown to the current host */}
           <DelegateHostCard />
         </aside>
       </main>
     </div>
-  )
-}
-
-function ModeTile({
-  active,
-  onClick,
-  icon,
-  title,
-  description,
-}: {
-  active: boolean
-  onClick: () => void
-  icon: React.ReactNode
-  title: string
-  description: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors ${active
-        ? "border-primary/60 bg-primary/10"
-        : "border-border bg-secondary/40 hover:bg-secondary/60"
-        }`}
-    >
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background">
-        {icon}
-      </div>
-      <div className="font-semibold">{title}</div>
-      <p className="text-xs text-muted-foreground">{description}</p>
-    </button>
   )
 }

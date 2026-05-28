@@ -12,18 +12,17 @@ import {
 } from "react"
 import type {
   Player,
-  QuestionItem,
   Room,
   Round,
   Screen,
   ViewAs,
   WordSource,
+  WordPack,
 } from "./types"
 import {
   generateRoomCode,
-  makeQuestionItems,
-  generateLocalRound,
-  QUESTION_POOL,
+  getRandomWordPack,
+  pickNextImpostor,
 } from "./mock-data"
 import { supabase } from "./supabase"
 import { useSession } from "@/hooks/use-session"
@@ -38,7 +37,6 @@ interface GameState {
   viewerId: string | null
   viewAs: ViewAs
   isGeneratingWord: boolean
-  isGeneratingQuestions: boolean
   genError: string | null
 }
 
@@ -48,86 +46,48 @@ const initialState: GameState = {
   viewerId: null,
   viewAs: "host",
   isGeneratingWord: false,
-  isGeneratingQuestions: false,
   genError: null,
 }
 
 // ---------- Context ----------
 
 interface GameContextValue extends GameState {
-  guesser: Player | null
+  impostor: Player | null
   viewer: Player | null
   createRoom: (hostName: string) => Promise<void>
   joinRoom: (code: string, name: string) => Promise<void>
   setScreen: (s: Screen) => void
   setViewAs: (v: ViewAs) => void
-  assignGuesser: () => Promise<void>
-  // Manually designate a specific player as guesser (host's pick)
-  setGuesser: (playerId: string) => Promise<void>
-  // Transfer host privileges to another player
-  delegateHost: (playerId: string) => Promise<void>
-  startRound: (
-    word: string,
-    questions: string[],
-    source: WordSource,
-    gameLanguage: "en" | "ro"
-  ) => Promise<void>
-  skipQuestion: () => Promise<void>
-  guessedCorrectly: () => Promise<void>
-  forceEndRound: () => Promise<void>
+  // Start a round with a given word pack — assigns Impostor secretly
+  startRound: (pack: WordPack, source: WordSource, gameLanguage: "en" | "ro") => Promise<void>
+  // Transition to voting phase
+  openVoting: () => Promise<void>
+  // Cast a vote: current viewer votes for targetId
+  castVote: (targetId: string) => Promise<void>
+  // Add a spoken word/clue to the round log
+  addSpokenWord: (text: string) => Promise<void>
+  // Host reveals the result, tallies votes
+  revealResult: () => Promise<void>
+  // Impostor's last-chance guess after being caught
+  submitImpostorGuess: (guess: string) => Promise<void>
+  // Skip round without result
+  skipRound: () => Promise<void>
+  // Start the next round
   newRound: () => Promise<void>
-  generateWord: (word?: string, langOverride?: "en" | "ro") => Promise<{
-    word: string
-    questions: string[]
-    fallback?: boolean
-  } | null>
+  // Generate / pick a random word pack
+  generateWord: (customWord?: string, customCategory?: string, langOverride?: "en" | "ro") => Promise<WordPack | null>
+  // Transfer host crown
+  delegateHost: (playerId: string) => Promise<void>
   leaveRoom: () => void
-  getMoreQuestions: () => Promise<void>
-  markQuestionUsed: (questionId: string) => void
-  currentQuestion: QuestionItem | null
-  remainingQuestions: number
 }
 
 const GameContext = createContext<GameContextValue | null>(null)
-
-// ---------- Guesser rotation helper ----------
-// Rules:
-//  1. The CURRENT host (hostId) cannot be a guesser (they know the word).
-//  2. The original host (firstHostId) CAN be a guesser if they are not the current host.
-//  3. Pick randomly from players who haven't been guesser yet (current cycle).
-//  4. When everyone eligible has been a guesser, reset the cycle and pick randomly again.
-function pickNextGuesser(room: Room): { player: Player; cycleReset: boolean } {
-  const eligible = room.players.filter((p) => p.id !== room.hostId)
-
-  if (eligible.length === 0) {
-    // Fallback: if only 1 player, they must be the host, so pick them anyway
-    const fallback = room.players[0]
-    return { player: fallback, cycleReset: false }
-  }
-
-  // Try players who haven't been guesser yet in this cycle
-  const notYetGuessed = eligible.filter((p) => !p.hasBeenGuesser)
-
-  if (notYetGuessed.length > 0) {
-    return {
-      player: notYetGuessed[Math.floor(Math.random() * notYetGuessed.length)],
-      cycleReset: false,
-    }
-  }
-
-  // Everyone eligible has been a guesser → start a new cycle
-  return {
-    player: eligible[Math.floor(Math.random() * eligible.length)],
-    cycleReset: true,
-  }
-}
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const { playerId, isLoaded } = useSession()
   const { language } = useLanguage()
   const [state, setState] = useState<GameState>(initialState)
 
-  // Use a ref to access the latest state inside callbacks without triggering re-renders or stale closures
   const stateRef = useRef(state)
   stateRef.current = state
 
@@ -139,7 +99,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const storedName = localStorage.getItem("wg_user_name")
 
     if (storedCode && storedName) {
-      // Small delay to ensure everything is ready
       setTimeout(() => {
         joinRoom(storedCode, storedName)
       }, 500)
@@ -161,7 +120,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // In a real app, you might only send changed fields. For this demo, replacing the row is fine.
       const { error } = await supabase.from("game_rooms").upsert({
         room_code: newRoom.code,
         status: newRoom.status,
@@ -173,7 +131,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         past_rounds: newRoom.pastRounds,
       })
       if (error) {
-        console.error(`Failed to sync room to Supabase: [${error.code}] ${error.message} - ${error.details}`)
+        console.error(`Failed to sync room to Supabase: [${error.code}] ${error.message}`)
       }
     } catch (err) {
       console.error("Failed to sync room to Supabase", err)
@@ -204,7 +162,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
           setState((prev) => {
             if (prev.room?.code !== roomCode) return prev
-            // Merge DB state into local state
             const updatedRoom: Room = {
               code: newDbRoom.room_code,
               status: newDbRoom.status as any,
@@ -228,50 +185,30 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [state.room?.code])
 
   // Connection Resilience: Remove player from DB on tab close/refresh.
-  // This ensures the player list is always accurate and empty rooms are cleaned up.
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    const handleBeforeUnload = () => {
       const room = stateRef.current.room
       const meId = stateRef.current.viewerId
       if (!room || !meId || !supabase) return
       const remainingPlayers = room.players.filter((p) => p.id !== meId)
 
-      if (remainingPlayers.length === 0 || (remainingPlayers.length === 1 && meId === room.hostId)) {
-        // Last player leaving, or the host left and only 1 player remains
+      if (remainingPlayers.length === 0) {
         supabase.from("game_rooms").delete().eq("room_code", room.code).then()
       } else {
-        // Someone else is still there
         let nextHostId = room.hostId
         let updatedPlayers = remainingPlayers
-        let nextStatus = room.status
-        let nextRound = room.currentRound
 
-        // 1. If the leaving player was the host, we must crown a new one
         if (meId === room.hostId) {
-          // Find the last player who is NOT the guesser
-          const eligibleHosts = remainingPlayers.filter(p => p.id !== room.currentRound?.guesserId)
-          const nextHost = eligibleHosts[eligibleHosts.length - 1] || remainingPlayers[0]
+          const nextHost = remainingPlayers[remainingPlayers.length - 1] || remainingPlayers[0]
           nextHostId = nextHost.id
           updatedPlayers = remainingPlayers.map((p) =>
             p.id === nextHostId ? { ...p, isHost: true } : p
           )
         }
 
-        // 2. If the guesser left, reset the game state because the game cannot continue
-        if (meId === room.currentRound?.guesserId) {
-          if (room.status === "in_progress") {
-            nextStatus = "ready"
-            nextRound = undefined
-          }
-          updatedPlayers = updatedPlayers.map(p => ({ ...p, isGuesser: false }))
-        }
-
-        // Update the room with the new player list, host, and potentially reset status
         supabase.from("game_rooms").update({
           players: updatedPlayers,
           host_id: nextHostId,
-          status: nextStatus,
-          current_round: nextRound || null
         }).eq("room_code", room.code).then()
       }
     }
@@ -291,24 +228,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
     let nextScreen = state.screen
     let nextViewAs = state.viewAs
 
-    // 1. Determine correct screen
     if (room.status === "waiting") {
       nextScreen = "lobby"
     } else if (room.status === "ready") {
-      // If I am the host and we just finished a round or assigned a guesser, 
-      // stay in host_setup so I can pick a new word.
-      nextScreen = me.isHost && !room.currentRound ? "host_setup" : "lobby"
+      nextScreen = me.isHost ? "host_setup" : "lobby"
     } else if (room.status === "in_progress") {
       nextScreen = "in_game"
+    } else if (room.status === "voting") {
+      nextScreen = "voting"
     } else if (room.status === "round_finished") {
       nextScreen = "round_result"
     }
 
-    // 2. Determine correct perspective
     if (me.isHost) {
       nextViewAs = "host"
-    } else if (me.isGuesser) {
-      nextViewAs = "guesser"
+    } else if (me.isImpostor) {
+      nextViewAs = "impostor"
     } else {
       nextViewAs = "player"
     }
@@ -325,16 +260,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const normalizedName = hostName.trim()
       if (!normalizedName) return
 
-      const newPlayerId = `p_${normalizedName.toLowerCase()}`
+      const newPlayerId = `p_${normalizedName.toLowerCase().replace(/\s+/g, "_")}`
 
       const host: Player = {
         id: newPlayerId,
         name: normalizedName,
         isHost: true,
         score: 0,
-        isGuesser: false,
-        hasBeenGuesser: false,
-        avatarColor: "bg-blue-500",
+        isImpostor: false,
+        hasBeenImpostor: false,
+        avatarColor: "var(--primary)",
         connected: true,
       }
       const room: Room = {
@@ -350,7 +285,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       setState((prev) => ({ ...prev, viewerId: host.id }))
 
-      // Persist for refresh
       localStorage.setItem("wg_room_code", room.code)
       localStorage.setItem("wg_user_name", normalizedName)
 
@@ -366,41 +300,37 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const normalizedName = name.trim()
       if (!normalizedName) return
 
-      const newPlayerId = `p_${normalizedName.toLowerCase()}`
+      const newPlayerId = `p_${normalizedName.toLowerCase().replace(/\s+/g, "_")}`
 
-      // Fetch current room state first to append. Avoid .single() to prevent PGRST116 if multiple/0 rows
       const { data: rows, error } = await supabase.from("game_rooms").select("*").eq("room_code", upperCode)
 
       if (error || !rows || rows.length === 0) {
-        console.error(`Room not found or error fetching room:`, error)
-
-        toast.error("Camera nu a fost găsită. Verifică codul sau creează o cameră nouă.")
+        console.error("Room not found:", error)
+        toast.error("Room not found. Check the code or create a new room.")
         localStorage.removeItem("wg_room_code")
         localStorage.removeItem("wg_user_name")
         return
       }
 
       const data = rows[0]
-
       const currentPlayers: Player[] = data.players || []
-      const existingPlayer = currentPlayers.find(p => p.id === newPlayerId)
+      const existingPlayer = currentPlayers.find((p) => p.id === newPlayerId)
 
       let players: Player[]
       if (existingPlayer) {
-        // Reconnect existing player
-        players = currentPlayers.map(p =>
+        players = currentPlayers.map((p) =>
           p.id === newPlayerId ? { ...p, connected: true, name: normalizedName } : p
         )
       } else {
-        // Add new player
+        const avatarColors = ["var(--accent)", "var(--destructive)", "var(--muted-foreground)", "var(--primary)"]
         const me: Player = {
           id: newPlayerId,
           name: normalizedName,
           isHost: false,
           score: 0,
-          isGuesser: false,
-          hasBeenGuesser: false,
-          avatarColor: "bg-green-500",
+          isImpostor: false,
+          hasBeenImpostor: false,
+          avatarColor: avatarColors[currentPlayers.length % avatarColors.length],
           connected: true,
         }
         players = [...currentPlayers, me]
@@ -408,7 +338,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       setState((prev) => ({ ...prev, viewerId: newPlayerId }))
 
-      // Persist for refresh
       localStorage.setItem("wg_room_code", upperCode)
       localStorage.setItem("wg_user_name", normalizedName)
 
@@ -432,209 +361,215 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const setScreen = useCallback((s: Screen) => setState((prev) => ({ ...prev, screen: s })), [])
   const setViewAs = useCallback((v: ViewAs) => setState((prev) => ({ ...prev, viewAs: v })), [])
 
-  const assignGuesser = useCallback(async () => {
-    const room = stateRef.current.room
-    if (!room) return
-
-    const { player: guesser, cycleReset } = pickNextGuesser(room)
-
-    const updatedPlayers = room.players.map((p) => ({
-      ...p,
-      isGuesser: p.id === guesser.id,
-      // On cycle reset clear everyone's flag; otherwise mark the chosen player
-      hasBeenGuesser: cycleReset ? p.id === guesser.id : p.hasBeenGuesser || p.id === guesser.id,
-    }))
-
-    const newRoom = { ...room, players: updatedPlayers, status: "ready" as const, roundSkipped: false }
-    await syncRoom(newRoom)
-  }, [])
-
-  // Manually pick a specific player as guesser (host's explicit choice).
-  // Still updates the rotation bookkeeping so the cycle stays consistent.
-  const setGuesser = useCallback(async (playerId: string) => {
-    const room = stateRef.current.room
-    if (!room) return
-
-    const updatedPlayers = room.players.map((p) => ({
-      ...p,
-      isGuesser: p.id === playerId,
-      hasBeenGuesser: p.hasBeenGuesser || p.id === playerId,
-    }))
-
-    const newRoom = { ...room, players: updatedPlayers, status: "ready" as const, roundSkipped: false }
-    await syncRoom(newRoom)
-  }, [])
-
-  // Transfer the host crown to another player
-  const delegateHost = useCallback(async (playerId: string) => {
-    const room = stateRef.current.room
-    if (!room || !supabase) return
-
-    const updatedPlayers = room.players.map((p) => ({
-      ...p,
-      isHost: p.id === playerId,
-    }))
-
-    const shouldReset = room.status === "in_progress" || room.status === "round_finished"
-    const nextStatus = shouldReset ? "ready" as const : room.status
-
-    const newRoomData = {
-      host_id: playerId,
-      players: updatedPlayers,
-      status: nextStatus,
-      current_round: shouldReset ? null : (room.currentRound || null)
-    }
-
-    // Determine local navigation
-    const nextViewAs = stateRef.current.viewerId === playerId ? "host" : "player"
-    const nextScreen = shouldReset
-      ? ("host_setup" as Screen)
-      : (nextViewAs === "player" ? "lobby" as Screen : undefined)
-
-    // 1. Optimistic local update (Instant UI flip)
-    const newRoom: Room = {
-      ...room,
-      hostId: playerId,
-      players: updatedPlayers,
-      status: nextStatus,
-      currentRound: shouldReset ? undefined : room.currentRound
-    }
-
-    setState((prev) => ({
-      ...prev,
-      room: newRoom,
-      ...(nextScreen ? { screen: nextScreen } : {}),
-      viewAs: nextViewAs,
-    }))
-
-    // 2. Sync with Supabase (using the same logic as syncRoom)
+  const generateWord = useCallback(async (
+    customWord?: string,
+    customCategory?: string,
+    langOverride?: "en" | "ro"
+  ) => {
+    setState((prev) => ({ ...prev, isGeneratingWord: true, genError: null }))
     try {
-      const { error } = await supabase.from("game_rooms").upsert({
-        room_code: newRoom.code,
-        status: newRoom.status,
-        host_id: newRoom.hostId,
-        first_host_id: newRoom.firstHostId,
-        round_skipped: newRoom.roundSkipped ?? false,
-        players: newRoom.players,
-        current_round: newRoom.currentRound || null,
-        past_rounds: newRoom.pastRounds,
-      })
+      await new Promise((r) => setTimeout(r, 600))
 
-      if (error) {
-        console.error("Failed to delegate host in DB:", error)
-        toast.error("Eroare la sincronizarea cu serverul.")
+      if (customWord && customWord.trim().length >= 2) {
+        const pack: WordPack = {
+          id: "custom",
+          emoji: "🎯",
+          category: customCategory?.trim() || "Custom",
+          word: customWord.trim(),
+        }
+        return pack
       }
-    } catch (err) {
-      console.error("Delegation error:", err)
+
+      return getRandomWordPack(langOverride || language as "en" | "ro")
+    } catch (e) {
+      console.error("Word generation failed", e)
+      return null
+    } finally {
+      setState((prev) => ({ ...prev, isGeneratingWord: false }))
     }
-  }, [])
+  }, [language])
 
   const startRound = useCallback(
-    async (word: string, questions: string[], source: WordSource, gameLanguage: "en" | "ro") => {
+    async (pack: WordPack, source: WordSource, gameLanguage: "en" | "ro") => {
       const room = stateRef.current.room
       if (!room) return
 
-      const guesser = room.players.find((p) => p.isGuesser)
-      if (!guesser) return
+      // Pick impostor randomly from non-host players
+      const { player: impostor, cycleReset } = pickNextImpostor(room)
+
+      const updatedPlayers = room.players.map((p) => ({
+        ...p,
+        isImpostor: p.id === impostor.id,
+        hasBeenImpostor: cycleReset
+          ? p.id === impostor.id
+          : p.hasBeenImpostor || p.id === impostor.id,
+      }))
 
       const round: Round = {
         id: `r_${Math.random().toString(36).slice(2, 9)}`,
-        word: word.toLowerCase(),
+        word: pack.word,
+        category: pack.category,
+        categoryEmoji: pack.emoji,
         source,
         language: gameLanguage,
-        guesserId: guesser.id,
-        questions: makeQuestionItems(questions),
-        currentQuestionIndex: 0,
+        impostorId: impostor.id,
+        spokenWords: [],
+        votes: {},
+        votingOpen: false,
         startedAt: Date.now(),
       }
 
-      const newRoom = { ...room, currentRound: round, status: "in_progress" as const }
-      const nextViewAs = stateRef.current.viewerId === guesser.id ? "guesser" : "player"
+      const me = stateRef.current.viewerId
+      const newRoom = { ...room, players: updatedPlayers, currentRound: round, status: "in_progress" as const }
+      const myPlayer = updatedPlayers.find((p) => p.id === me)
+      const nextViewAs: ViewAs = myPlayer?.isHost ? "host" : myPlayer?.isImpostor ? "impostor" : "player"
+
       await syncRoom(newRoom, "in_game", nextViewAs)
     },
     []
   )
 
-  const skipQuestion = useCallback(async () => {
+  const openVoting = useCallback(async () => {
     const room = stateRef.current.room
     if (!room?.currentRound) return
 
-    const round = room.currentRound
-    const idx = round.currentQuestionIndex
-    const updatedQuestions = round.questions.map((q, i) =>
-      i === idx ? { ...q, skipped: true } : q,
-    )
-    const next = (idx + 1) % updatedQuestions.length
-
     const newRoom = {
       ...room,
-      currentRound: {
-        ...round,
-        questions: updatedQuestions,
-        currentQuestionIndex: next,
-      },
+      status: "voting" as const,
+      currentRound: { ...room.currentRound, votingOpen: true },
+    }
+    await syncRoom(newRoom, "voting")
+  }, [])
+
+  const castVote = useCallback(async (targetId: string) => {
+    const room = stateRef.current.room
+    const me = stateRef.current.viewerId
+    if (!room?.currentRound || !me) return
+
+    const updatedVotes = { ...room.currentRound.votes, [me]: targetId }
+    const newRoom = {
+      ...room,
+      currentRound: { ...room.currentRound, votes: updatedVotes },
     }
     await syncRoom(newRoom)
   }, [])
 
-  const markQuestionUsed = useCallback(async (questionId: string) => {
+  const addSpokenWord = useCallback(async (text: string) => {
     const room = stateRef.current.room
-    if (!room?.currentRound) return
+    const me = stateRef.current.viewerId
+    if (!room?.currentRound || !me) return
 
-    const round = room.currentRound
-    const updatedQuestions = round.questions.map((q) =>
-      q.id === questionId ? { ...q, used: true } : q,
-    )
+    const newWord = {
+      id: `w_${Math.random().toString(36).slice(2, 9)}`,
+      playerId: me,
+      text: text.trim(),
+      timestamp: Date.now(),
+    }
 
+    const updatedWords = [...room.currentRound.spokenWords, newWord]
     const newRoom = {
       ...room,
-      currentRound: { ...round, questions: updatedQuestions },
+      currentRound: { ...room.currentRound, spokenWords: updatedWords },
     }
     await syncRoom(newRoom)
   }, [])
 
-  const guessedCorrectly = useCallback(async () => {
+  const revealResult = useCallback(async () => {
     const room = stateRef.current.room
     if (!room?.currentRound) return
 
     const round = room.currentRound
-    const updatedRound: Round = { ...round, won: true, endedAt: Date.now() }
+    const votes = round.votes
+    const impostorId = round.impostorId
 
-    const updatedPlayers = room.players.map((p) => {
-      let isHost = p.isHost
-      let score = p.score
-      // Mark the guesser's hasBeenGuesser when they complete the round
-      const hasBeenGuesser = p.hasBeenGuesser || p.id === round.guesserId
-      if (p.id === round.guesserId) {
-        isHost = true
-        score += 1
-      } else if (p.isHost) {
-        isHost = false
+    // Tally votes
+    const tally: Record<string, number> = {}
+    for (const targetId of Object.values(votes)) {
+      tally[targetId] = (tally[targetId] || 0) + 1
+    }
+
+    // Find who got the most votes
+    let topVotedId: string | null = null
+    let topVoteCount = 0
+    for (const [pid, count] of Object.entries(tally)) {
+      if (count > topVoteCount) {
+        topVoteCount = count
+        topVotedId = pid
       }
-      return { ...p, isHost, score, hasBeenGuesser }
+    }
+
+    const impostorCaught = topVotedId === impostorId
+
+    // Update scores: each player who voted correctly gets +1
+    const updatedPlayers = room.players.map((p) => {
+      const votedFor = votes[p.id]
+      const votedCorrectly = votedFor === impostorId
+      return {
+        ...p,
+        score: p.score + (votedCorrectly && !p.isImpostor ? 1 : 0),
+      }
     })
 
-    const newHostId = round.guesserId
+    const updatedRound: Round = {
+      ...round,
+      impostorCaught,
+      endedAt: Date.now(),
+    }
+
     const newRoom = {
       ...room,
-      hostId: newHostId,
       players: updatedPlayers,
       currentRound: updatedRound,
       status: "round_finished" as const,
-      roundSkipped: false,
     }
 
-    const nextViewAs = stateRef.current.viewerId === newHostId ? "host" : "player"
+    const me = stateRef.current.viewerId
+    const myPlayer = updatedPlayers.find((p) => p.id === me)
+    const nextViewAs: ViewAs = myPlayer?.isHost ? "host" : myPlayer?.isImpostor ? "impostor" : "player"
     await syncRoom(newRoom, "round_result", nextViewAs)
   }, [])
 
-  const forceEndRound = useCallback(async () => {
+  const submitImpostorGuess = useCallback(async (guess: string) => {
     const room = stateRef.current.room
     if (!room?.currentRound) return
 
-    const updatedRound: Round = { ...room.currentRound, won: false, endedAt: Date.now() }
-    // Mark roundSkipped so that newRound() will keep the same guesser
-    const newRoom = { ...room, currentRound: updatedRound, status: "round_finished" as const, roundSkipped: true }
+    const round = room.currentRound
+    const normalize = (s: string) => s.trim().toLowerCase().replace(/[.,!?]+$/, "")
+    const correct = normalize(guess) === normalize(round.word)
+
+    // If correct, Impostor wins: +2 score bonus
+    const updatedPlayers = room.players.map((p) => ({
+      ...p,
+      score: p.score + (p.isImpostor && correct ? 2 : 0),
+    }))
+
+    const updatedRound: Round = {
+      ...round,
+      impostorGuess: guess.trim(),
+      impostorGuessedWord: correct,
+      // If guessed correctly, treat as Impostor escaped (they win)
+      impostorCaught: correct ? false : round.impostorCaught,
+    }
+
+    const newRoom = {
+      ...room,
+      players: updatedPlayers,
+      currentRound: updatedRound,
+    }
+    await syncRoom(newRoom)
+  }, [])
+
+  const skipRound = useCallback(async () => {
+    const room = stateRef.current.room
+    if (!room?.currentRound) return
+
+    const updatedRound: Round = { ...room.currentRound, endedAt: Date.now() }
+    const newRoom = {
+      ...room,
+      currentRound: updatedRound,
+      status: "round_finished" as const,
+      roundSkipped: true,
+    }
     await syncRoom(newRoom, "round_result")
   }, [])
 
@@ -642,30 +577,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const room = stateRef.current.room
     if (!room) return
 
-    const past = room.currentRound ? [...room.pastRounds, room.currentRound] : room.pastRounds
+    const past = room.currentRound
+      ? [...room.pastRounds, room.currentRound]
+      : room.pastRounds
 
-    let updatedPlayers: Player[]
-
-    if (room.roundSkipped) {
-      // Host skipped the round → keep the exact same guesser, no rotation bookkeeping
-      const currentGuesserId = room.players.find((p) => p.isGuesser)?.id
-      updatedPlayers = room.players.map((p) => ({
-        ...p,
-        isGuesser: currentGuesserId ? p.id === currentGuesserId : p.isGuesser,
-      }))
-    } else {
-      // Normal flow → advance the rotation, respecting cycle boundaries
-      const { player: nextGuesser, cycleReset } = pickNextGuesser(room)
-      updatedPlayers = room.players.map((p) => ({
-        ...p,
-        isGuesser: p.id === nextGuesser.id,
-        // On cycle reset: clear all flags and mark only the new guesser
-        // Otherwise: accumulate — keep existing flags and mark the new guesser
-        hasBeenGuesser: cycleReset
-          ? p.id === nextGuesser.id
-          : p.hasBeenGuesser || p.id === nextGuesser.id,
-      }))
-    }
+    // Reset impostor flags
+    const updatedPlayers = room.players.map((p) => ({
+      ...p,
+      isImpostor: false,
+    }))
 
     const newRoom = {
       ...room,
@@ -675,7 +595,58 @@ export function GameProvider({ children }: { children: ReactNode }) {
       status: "ready" as const,
       roundSkipped: false,
     }
-    await syncRoom(newRoom, "host_setup")
+
+    const me = stateRef.current.viewerId
+    const myPlayer = updatedPlayers.find((p) => p.id === me)
+    await syncRoom(newRoom, myPlayer?.isHost ? "host_setup" : "lobby", myPlayer?.isHost ? "host" : "player")
+  }, [])
+
+  const delegateHost = useCallback(async (playerId: string) => {
+    const room = stateRef.current.room
+    if (!room || !supabase) return
+
+    const updatedPlayers = room.players.map((p) => ({
+      ...p,
+      isHost: p.id === playerId,
+    }))
+
+    const newRoom: Room = {
+      ...room,
+      hostId: playerId,
+      players: updatedPlayers,
+      status: "ready" as const,
+      currentRound: undefined,
+    }
+
+    const me = stateRef.current.viewerId
+    const nextViewAs: ViewAs = me === playerId ? "host" : "player"
+    const nextScreen: Screen = me === playerId ? "host_setup" : "lobby"
+
+    setState((prev) => ({
+      ...prev,
+      room: newRoom,
+      screen: nextScreen,
+      viewAs: nextViewAs,
+    }))
+
+    try {
+      const { error } = await supabase.from("game_rooms").upsert({
+        room_code: newRoom.code,
+        status: newRoom.status,
+        host_id: newRoom.hostId,
+        first_host_id: newRoom.firstHostId,
+        round_skipped: false,
+        players: newRoom.players,
+        current_round: null,
+        past_rounds: newRoom.pastRounds,
+      })
+      if (error) {
+        console.error("Failed to delegate host:", error)
+        toast.error("Sync error. Please try again.")
+      }
+    } catch (err) {
+      console.error("Delegation error:", err)
+    }
   }, [])
 
   const leaveRoom = useCallback(async () => {
@@ -685,47 +656,29 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (room && meId && supabase) {
       try {
         const remainingPlayers = room.players.filter((p) => p.id !== meId)
-
-        if (remainingPlayers.length === 0 || (remainingPlayers.length === 1 && meId === room.hostId)) {
-          // Last player leaving, or the host left and only 1 player remains
+        if (remainingPlayers.length === 0) {
           await supabase.from("game_rooms").delete().eq("room_code", room.code)
         } else {
-          // Someone else is still there
           let nextHostId = room.hostId
           let updatedPlayers = remainingPlayers
-          let nextStatus = room.status
-          let nextRound = room.currentRound
 
-          // 1. If the leaving player was the host, we must crown a new one
           if (meId === room.hostId) {
-            // Find the last player who is NOT the guesser
-            const eligibleHosts = remainingPlayers.filter(p => p.id !== room.currentRound?.guesserId)
-            const nextHost = eligibleHosts[eligibleHosts.length - 1] || remainingPlayers[0]
+            const nextHost = remainingPlayers[remainingPlayers.length - 1] || remainingPlayers[0]
             nextHostId = nextHost.id
             updatedPlayers = remainingPlayers.map((p) =>
               p.id === nextHostId ? { ...p, isHost: true } : p
             )
           }
 
-          // 2. If the guesser left, reset the game state because the game cannot continue
-          if (meId === room.currentRound?.guesserId) {
-            if (room.status === "in_progress") {
-              nextStatus = "ready"
-              nextRound = undefined
-            }
-            updatedPlayers = updatedPlayers.map(p => ({ ...p, isGuesser: false }))
-          }
-
-          // Update the room with the new player list, host, and potentially reset status
           await supabase.from("game_rooms").update({
             players: updatedPlayers,
             host_id: nextHostId,
-            status: nextStatus,
-            current_round: nextRound || null
+            status: "waiting",
+            current_round: null,
           }).eq("room_code", room.code)
         }
       } catch (err) {
-        console.error("Failed to cleanup room/player on leave:", err)
+        console.error("Failed to cleanup on leave:", err)
       }
     }
 
@@ -734,95 +687,29 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setState(initialState)
   }, [])
 
-  const getMoreQuestions = useCallback(async () => {
-    const room = stateRef.current.room
-    if (!room?.currentRound) return
-
-    setState((prev) => ({ ...prev, isGeneratingQuestions: true }))
-    try {
-      // Small delay for realism
-      await new Promise(r => setTimeout(r, 600))
-
-      const usedTexts = new Set(room.currentRound.questions.map(q => q.text))
-      const targetLang = room.currentRound.language || language
-      const available = QUESTION_POOL[targetLang].filter(text => !usedTexts.has(text))
-
-      if (available.length === 0) return
-
-      // Pick 5 random ones
-      const nextBatch = available.sort(() => Math.random() - 0.5).slice(0, 5)
-
-      const newQuestionItems = nextBatch.map((text: string) => ({
-        id: Math.random().toString(36).substring(2, 9),
-        text,
-        used: false,
-        skipped: false,
-      }))
-
-      const updatedRound = {
-        ...room.currentRound,
-        questions: [...room.currentRound.questions, ...newQuestionItems],
-      }
-      const newRoom = { ...room, currentRound: updatedRound }
-      await syncRoom(newRoom)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setState((prev) => ({ ...prev, isGeneratingQuestions: false }))
-    }
-  }, [])
-
-  const generateWord = useCallback(async (word?: string, langOverride?: "en" | "ro") => {
-    setState((prev) => ({ ...prev, isGeneratingWord: true, genError: null }))
-    try {
-      // Small delay for realism
-      await new Promise(r => setTimeout(r, 800))
-
-      const local = generateLocalRound(word, langOverride || language)
-      return {
-        word: local.word,
-        questions: local.questions,
-        fallback: false,
-      }
-    } catch (e) {
-      console.error("Local generation failed", e)
-      return null
-    } finally {
-      setState((prev) => ({ ...prev, isGeneratingWord: false }))
-    }
-  }, [])
-
   const value = useMemo<GameContextValue>(() => {
-    const guesser = state.room?.players.find((p: any) => p.isGuesser) ?? null
-    const viewer = state.room?.players.find((p: any) => p.id === state.viewerId) ?? null
-    const round = state.room?.currentRound
-    const currentQuestion = round && round.questions[round.currentQuestionIndex]
-      ? round.questions[round.currentQuestionIndex]
-      : null
-    const remainingQuestions = round ? round.questions.filter((q: QuestionItem) => !q.used && !q.skipped).length : 0
+    const impostor = state.room?.players.find((p) => p.isImpostor) ?? null
+    const viewer = state.room?.players.find((p) => p.id === state.viewerId) ?? null
 
     return {
       ...state,
-      guesser,
+      impostor,
       viewer,
-      currentQuestion,
-      remainingQuestions,
       createRoom,
       joinRoom,
       setScreen,
       setViewAs,
-      assignGuesser,
-      setGuesser,
-      delegateHost,
       startRound,
-      skipQuestion,
-      guessedCorrectly,
-      forceEndRound,
+      openVoting,
+      castVote,
+      addSpokenWord,
+      revealResult,
+      submitImpostorGuess,
+      skipRound,
       newRound,
       generateWord,
+      delegateHost,
       leaveRoom,
-      getMoreQuestions,
-      markQuestionUsed,
     }
   }, [
     state,
@@ -830,21 +717,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
     joinRoom,
     setScreen,
     setViewAs,
-    assignGuesser,
-    setGuesser,
-    delegateHost,
     startRound,
-    skipQuestion,
-    guessedCorrectly,
-    forceEndRound,
+    openVoting,
+    castVote,
+    addSpokenWord,
+    revealResult,
+    submitImpostorGuess,
+    skipRound,
     newRound,
     generateWord,
+    delegateHost,
     leaveRoom,
-    getMoreQuestions,
-    markQuestionUsed,
   ])
 
-  if (!isLoaded) return null // Wait for session to init
+  if (!isLoaded) return null
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>
 }

@@ -13,36 +13,36 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  applicationName: "Secret Verb",
-  title: "Secret Verb — Multiplayer party game",
+  applicationName: "The Impostor",
+  title: "The Impostor — Social Deduction Party Game",
   description:
-    "A real-time multiplayer word-guessing game with AI-crafted hints. Create a room, invite friends, take turns being the Guesser.",
+    "A real-time social deduction party game. One player is the Impostor — they don't know the secret word. Ask clever questions, vote out the Impostor, and don't get fooled.",
   generator: "v0.app",
   appleWebApp: {
     capable: true,
-    title: "Secret Verb",
+    title: "The Impostor",
     statusBarStyle: "black-translucent",
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
-    title: "Secret Verb — Multiplayer party game",
-    description: "A real-time multiplayer word-guessing game with AI-crafted hints. Create a room, invite friends, take turns being the Guesser.",
+    title: "The Impostor — Social Deduction Party Game",
+    description: "One player is the Impostor — they don't know the secret word. Find them before they blend in!",
     type: "website",
     images: [
       {
         url: "/social.png",
         width: 1200,
         height: 630,
-        alt: "Secret Verb Game",
+        alt: "The Impostor Game",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Secret Verb — Multiplayer party game",
-    description: "A real-time multiplayer word-guessing game with AI-crafted hints. Create a room, invite friends, take turns being the Guesser.",
+    title: "The Impostor — Social Deduction Party Game",
+    description: "One player is the Impostor — they don't know the secret word. Find them before they blend in!",
     images: ["/social.png"],
   },
   icons: {

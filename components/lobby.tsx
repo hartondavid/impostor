@@ -6,23 +6,12 @@ import { Button } from "@/components/ui/button"
 import { PlayerList } from "@/components/player-list"
 import { RoomHeader } from "@/components/room-header"
 import { Spinner } from "@/components/ui/spinner"
-import { Eye, Play, UserPlus } from "lucide-react"
+import { Play } from "lucide-react"
 import { toast } from "sonner"
 import { DelegateHostCard } from "@/components/delegate-host"
 
-// Lobby = pre-game waiting room. Host can add fake players (for demo / testing
-// without a backend) and start the game once at least one other player is in.
 export function Lobby() {
-  const {
-    room,
-    viewerId,
-    viewAs,
-    setViewAs,
-    assignGuesser,
-    setScreen,
-    startRound,
-    isGeneratingWord,
-  } = useGame()
+  const { room, viewerId, setScreen } = useGame()
   const { t } = useLanguage()
 
   if (!room) return null
@@ -32,21 +21,17 @@ export function Lobby() {
   const playersLocal = room.players.length
 
   const onStart = () => {
-    if (room.players.length < 2) {
+    if (room.players.length < 3) {
       toast.error(t("needMorePlayers"))
       return
     }
-    assignGuesser()
     setScreen("host_setup")
   }
-
-
 
   return (
     <div className="min-h-screen">
       <RoomHeader />
       <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_360px]">
-        {/* Left: hero / instructions */}
         <section className="space-y-6">
           <div className="rounded-2xl border border-border bg-card p-6">
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/40 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -57,8 +42,7 @@ export function Lobby() {
               {t("shareRoomCode")}
             </h1>
             <p className="mt-2 text-pretty text-muted-foreground">
-              {t("lobbyDesc1")} {" "}
-              <span className="text-foreground">{t("lobbyDesc2")}</span>
+              {t("lobbyDesc1")} <span className="text-foreground">{t("lobbyDesc2")}</span>
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -73,7 +57,7 @@ export function Lobby() {
             <div className="mt-6 flex flex-wrap gap-3">
               {isViewerHost && (
                 <>
-                  <Button onClick={onStart} size="lg">
+                  <Button onClick={onStart} size="lg" className="w-full sm:w-auto text-base">
                     <Play className="mr-2 h-4 w-4" />
                     {t("startGame")}
                   </Button>
@@ -83,17 +67,14 @@ export function Lobby() {
                 <div className="flex w-full flex-col gap-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Spinner className="h-4 w-4" />
-                    {t("waitingForHost")} {host?.name} {t("toStartGame")}
+                    {t("waitingForHost")} <span className="font-semibold text-foreground">{host?.name}</span> {t("toStartGame")}
                   </div>
                 </div>
               )}
             </div>
           </div>
-
-
         </section>
 
-        {/* Right: player list */}
         <aside className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -106,11 +87,12 @@ export function Lobby() {
           <PlayerList
             players={room.players}
             viewerId={viewerId}
-            hideGuesserBadge={!isViewerHost}
           />
-          <div className="pt-4">
-            <DelegateHostCard />
-          </div>
+          {isViewerHost && (
+            <div className="pt-4">
+              <DelegateHostCard />
+            </div>
+          )}
         </aside>
       </main>
     </div>
