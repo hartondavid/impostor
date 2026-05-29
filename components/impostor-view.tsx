@@ -8,6 +8,7 @@ import { PlayerList } from "@/components/player-list"
 import { ShieldAlert, Lock, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SpokenWordsLog } from "@/components/spoken-words-log"
+import { AdBanner } from "@/components/ad-banner"
 
 // Impostor's dashboard. They DO NOT see the secret word — only:
 // - the category hint
@@ -91,6 +92,7 @@ export function ImpostorView() {
           {t("room")}
         </h2>
         <PlayerList players={room.players} viewerId={viewerId} hideGuesserBadge={true} />
+        <AdBanner variant="compact" className="opacity-90" />
       </aside>
     </main>
   )
