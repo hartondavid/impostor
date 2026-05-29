@@ -10,6 +10,29 @@ import {
   useState,
   type ReactNode,
 } from "react"
+
+// 12 perceptually distinct colors — evenly spaced 30° apart on the hue wheel,
+// same lightness & chroma so no two look similar.
+const AVATAR_COLORS = [
+  "#e05252", // 0°   red
+  "#e07a30", // 30°  orange
+  "#d4b800", // 60°  yellow
+  "#7ab730", // 90°  lime
+  "#28a745", // 120° green
+  "#1aab7a", // 150° emerald
+  "#0ea5b0", // 180° teal
+  "#2e86de", // 210° sky
+  "#4455e8", // 240° blue
+  "#8844e0", // 270° purple
+  "#c030c0", // 300° magenta
+  "#e03080", // 330° rose
+]
+
+function pickAvatarColor(takenColors: string[]): string {
+  const taken = new Set(takenColors)
+  return AVATAR_COLORS.find((c) => !taken.has(c)) ?? AVATAR_COLORS[takenColors.length % AVATAR_COLORS.length]
+}
+
 import type {
   Player,
   Room,
@@ -25,6 +48,18 @@ import {
   pickNextImpostor,
 } from "./mock-data"
 import { supabase } from "./supabase"
+
+/** Keep `player.isHost` in sync with `room.hostId` (e.g. after host refresh / DB realtime). */
+function syncPlayerHostFlags(room: Room): Room {
+  const hostId = room.hostId
+  return {
+    ...room,
+    players: room.players.map((p) => ({
+      ...p,
+      isHost: p.id === hostId,
+    })),
+  }
+}
 import { useSession } from "@/hooks/use-session"
 import { useLanguage } from "@/lib/language-context"
 import { toast } from "sonner"
@@ -68,6 +103,8 @@ interface GameContextValue extends GameState {
   addSpokenWord: (text: string) => Promise<void>
   // Host reveals the result, tallies votes
   revealResult: () => Promise<void>
+  // Ends the round immediately because impostor guessed correctly
+  hostEndRoundImpostorGuessed: () => Promise<void>
   // Impostor's last-chance guess after being caught
   submitImpostorGuess: (guess: string) => Promise<void>
   // Skip round without result
@@ -85,7 +122,7 @@ const GameContext = createContext<GameContextValue | null>(null)
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const { playerId, isLoaded } = useSession()
-  const { language } = useLanguage()
+  const { language, t } = useLanguage()
   const [state, setState] = useState<GameState>(initialState)
 
   const stateRef = useRef(state)
@@ -107,9 +144,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // Internal helper to update both local state (optimistic) and Supabase
   const syncRoom = async (newRoom: Room, nextScreen?: Screen, nextViewAs?: ViewAs) => {
+    const room = syncPlayerHostFlags(newRoom)
     setState((prev) => ({
       ...prev,
-      room: newRoom,
+      room,
       ...(nextScreen ? { screen: nextScreen } : {}),
       ...(nextViewAs ? { viewAs: nextViewAs } : {}),
     }))
@@ -121,14 +159,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     try {
       const { error } = await supabase.from("game_rooms").upsert({
-        room_code: newRoom.code,
-        status: newRoom.status,
-        host_id: newRoom.hostId,
-        first_host_id: newRoom.firstHostId,
-        round_skipped: newRoom.roundSkipped ?? false,
-        players: newRoom.players,
-        current_round: newRoom.currentRound || null,
-        past_rounds: newRoom.pastRounds,
+        room_code: room.code,
+        status: room.status,
+        host_id: room.hostId,
+        first_host_id: room.firstHostId,
+        round_skipped: room.roundSkipped ?? false,
+        players: room.players,
+        current_round: room.currentRound || null,
+        past_rounds: room.pastRounds,
       })
       if (error) {
         console.error(`Failed to sync room to Supabase: [${error.code}] ${error.message}`)
@@ -162,9 +200,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
           setState((prev) => {
             if (prev.room?.code !== roomCode) return prev
-            const updatedRoom: Room = {
+            const updatedRoom = syncPlayerHostFlags({
               code: newDbRoom.room_code,
-              status: newDbRoom.status as any,
+              status: newDbRoom.status as Room["status"],
               hostId: newDbRoom.host_id,
               firstHostId: newDbRoom.first_host_id ?? newDbRoom.host_id,
               players: newDbRoom.players || [],
@@ -172,7 +210,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
               pastRounds: newDbRoom.past_rounds || [],
               createdAt: new Date(newDbRoom.created_at).getTime(),
               roundSkipped: newDbRoom.round_skipped ?? false,
-            }
+            })
             return { ...prev, room: updatedRoom }
           })
         }
@@ -190,25 +228,33 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const room = stateRef.current.room
       const meId = stateRef.current.viewerId
       if (!room || !meId || !supabase) return
-      const remainingPlayers = room.players.filter((p) => p.id !== meId)
+      
+      const isOnlyPlayer = room.players.length === 1
 
-      if (remainingPlayers.length === 0) {
+      if (isOnlyPlayer) {
         supabase.from("game_rooms").delete().eq("room_code", room.code).then()
       } else {
         let nextHostId = room.hostId
-        let updatedPlayers = remainingPlayers
+        let updatedPlayers = room.players.map((p) =>
+          p.id === meId ? { ...p, connected: false } : p
+        )
 
         if (meId === room.hostId) {
-          const nextHost = remainingPlayers[remainingPlayers.length - 1] || remainingPlayers[0]
-          nextHostId = nextHost.id
-          updatedPlayers = remainingPlayers.map((p) =>
-            p.id === nextHostId ? { ...p, isHost: true } : p
-          )
+          const nextHost =
+            updatedPlayers.find((p) => p.id !== meId && p.connected) ??
+            updatedPlayers.find((p) => p.id !== meId)
+          if (nextHost) nextHostId = nextHost.id
         }
 
-        supabase.from("game_rooms").update({
+        const roomAfterLeave = syncPlayerHostFlags({
+          ...room,
+          hostId: nextHostId,
           players: updatedPlayers,
-          host_id: nextHostId,
+        })
+
+        supabase.from("game_rooms").update({
+          players: roomAfterLeave.players,
+          host_id: roomAfterLeave.hostId,
         }).eq("room_code", room.code).then()
       }
     }
@@ -231,7 +277,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (room.status === "waiting") {
       nextScreen = "lobby"
     } else if (room.status === "ready") {
-      nextScreen = me.isHost ? "host_setup" : "lobby"
+      nextScreen = me.id === room.hostId ? "host_setup" : "lobby"
     } else if (room.status === "in_progress") {
       nextScreen = "in_game"
     } else if (room.status === "voting") {
@@ -240,7 +286,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       nextScreen = "round_result"
     }
 
-    if (me.isHost) {
+    if (me.isSpectator) {
+      nextViewAs = "spectator"
+    } else if (me.id === room.hostId) {
       nextViewAs = "host"
     } else if (me.isImpostor) {
       nextViewAs = "impostor"
@@ -251,7 +299,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (nextScreen !== state.screen || nextViewAs !== state.viewAs) {
       setState((prev) => ({ ...prev, screen: nextScreen, viewAs: nextViewAs }))
     }
-  }, [state.room?.status, state.room?.currentRound?.id, state.viewerId])
+  }, [state.room?.status, state.room?.hostId, state.room?.currentRound?.id, state.viewerId])
 
   // --- Actions ---
 
@@ -269,7 +317,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         score: 0,
         isImpostor: false,
         hasBeenImpostor: false,
-        avatarColor: "var(--primary)",
+        avatarColor: AVATAR_COLORS[0],
         connected: true,
       }
       const room: Room = {
@@ -322,7 +370,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
           p.id === newPlayerId ? { ...p, connected: true, name: normalizedName } : p
         )
       } else {
-        const avatarColors = ["var(--accent)", "var(--destructive)", "var(--muted-foreground)", "var(--primary)"]
         const me: Player = {
           id: newPlayerId,
           name: normalizedName,
@@ -330,7 +377,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           score: 0,
           isImpostor: false,
           hasBeenImpostor: false,
-          avatarColor: avatarColors[currentPlayers.length % avatarColors.length],
+          avatarColor: pickAvatarColor(currentPlayers.map((p) => p.avatarColor)),
           connected: true,
         }
         players = [...currentPlayers, me]
@@ -341,7 +388,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("wg_room_code", upperCode)
       localStorage.setItem("wg_user_name", normalizedName)
 
-      const updatedRoom: Room = {
+      const updatedRoom = syncPlayerHostFlags({
         code: data.room_code,
         status: data.status,
         hostId: data.host_id,
@@ -351,9 +398,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
         pastRounds: data.past_rounds || [],
         createdAt: new Date(data.created_at).getTime(),
         roundSkipped: data.round_skipped ?? false,
-      }
+      })
 
-      await syncRoom(updatedRoom)
+      const me = updatedRoom.players.find((p) => p.id === newPlayerId)
+      const isMeHost = me?.id === updatedRoom.hostId
+      const nextViewAs: ViewAs = isMeHost
+        ? "host"
+        : me?.isImpostor
+          ? "impostor"
+          : "player"
+      const nextScreen: Screen =
+        updatedRoom.status === "ready" && isMeHost
+          ? "host_setup"
+          : updatedRoom.status === "in_progress"
+            ? "in_game"
+            : updatedRoom.status === "voting"
+              ? "voting"
+              : updatedRoom.status === "round_finished"
+                ? "round_result"
+                : "lobby"
+
+      await syncRoom(updatedRoom, nextScreen, nextViewAs)
     },
     []
   )
@@ -403,6 +468,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         hasBeenImpostor: cycleReset
           ? p.id === impostor.id
           : p.hasBeenImpostor || p.id === impostor.id,
+        isSpectator: false,
       }))
 
       const round: Round = {
@@ -422,7 +488,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const me = stateRef.current.viewerId
       const newRoom = { ...room, players: updatedPlayers, currentRound: round, status: "in_progress" as const }
       const myPlayer = updatedPlayers.find((p) => p.id === me)
-      const nextViewAs: ViewAs = myPlayer?.isHost ? "host" : myPlayer?.isImpostor ? "impostor" : "player"
+      const nextViewAs: ViewAs =
+        myPlayer?.id === room.hostId ? "host" : myPlayer?.isImpostor ? "impostor" : "player"
 
       await syncRoom(newRoom, "in_game", nextViewAs)
     },
@@ -498,6 +565,45 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // Find all players with the maximum votes to check for a tie
+    const topVotedPlayers: string[] = []
+    for (const [pid, count] of Object.entries(tally)) {
+      if (count === topVoteCount) {
+        topVotedPlayers.push(pid)
+      }
+    }
+    const isTie = topVoteCount > 0 && topVotedPlayers.length > 1
+
+    if (isTie) {
+      // In case of a tie, the game continues (voting resets, back to in_progress, no spectators, no score changes)
+      const updatedRound: Round = {
+        ...round,
+        votes: {},
+        votingOpen: false,
+      }
+
+      const newRoom = {
+        ...room,
+        currentRound: updatedRound,
+        status: "in_progress" as const,
+      }
+
+      const me = stateRef.current.viewerId
+      const myPlayer = room.players.find((p) => p.id === me)
+      const nextViewAs: ViewAs = myPlayer?.isSpectator
+        ? "spectator"
+        : myPlayer?.id === room.hostId
+          ? "host"
+          : myPlayer?.isImpostor
+            ? "impostor"
+            : "player"
+
+      toast.info(t("votingTie"))
+
+      await syncRoom(newRoom, "in_game", nextViewAs)
+      return
+    }
+
     const impostorCaught = topVotedId === impostorId
 
     // Update scores: each player who voted correctly gets +1
@@ -507,12 +613,80 @@ export function GameProvider({ children }: { children: ReactNode }) {
       return {
         ...p,
         score: p.score + (votedCorrectly && !p.isImpostor ? 1 : 0),
+        isSpectator: (topVotedId === p.id && !impostorCaught) ? true : p.isSpectator,
       }
     })
 
+    if (!impostorCaught) {
+      // Incorrect vote -> back to in_progress
+      const updatedRound: Round = {
+        ...round,
+        votes: {},
+        votingOpen: false,
+      }
+
+      const newRoom = {
+        ...room,
+        players: updatedPlayers,
+        currentRound: updatedRound,
+        status: "in_progress" as const,
+      }
+      
+      const me = stateRef.current.viewerId
+      const myPlayer = updatedPlayers.find((p) => p.id === me)
+      const nextViewAs: ViewAs = myPlayer?.isSpectator
+        ? "spectator"
+        : myPlayer?.id === room.hostId
+          ? "host"
+          : myPlayer?.isImpostor
+            ? "impostor"
+            : "player"
+      await syncRoom(newRoom, "in_game", nextViewAs)
+    } else {
+      // Impostor Caught -> end round
+      const updatedRound: Round = {
+        ...round,
+        impostorCaught,
+        endedAt: Date.now(),
+      }
+
+      const newRoom = {
+        ...room,
+        players: updatedPlayers,
+        currentRound: updatedRound,
+        status: "round_finished" as const,
+      }
+
+      const me = stateRef.current.viewerId
+      const myPlayer = updatedPlayers.find((p) => p.id === me)
+      const nextViewAs: ViewAs = myPlayer?.isSpectator
+        ? "spectator"
+        : myPlayer?.id === room.hostId
+          ? "host"
+          : myPlayer?.isImpostor
+            ? "impostor"
+            : "player"
+      await syncRoom(newRoom, "round_result", nextViewAs)
+    }
+  }, [])
+
+  const hostEndRoundImpostorGuessed = useCallback(async () => {
+    const room = stateRef.current.room
+    if (!room?.currentRound) return
+
+    const round = room.currentRound
+
+    // If correct, Impostor wins: +2 score bonus
+    const updatedPlayers = room.players.map((p) => ({
+      ...p,
+      score: p.score + (p.isImpostor ? 2 : 0),
+    }))
+
     const updatedRound: Round = {
       ...round,
-      impostorCaught,
+      impostorGuess: "Guessed out loud",
+      impostorGuessedWord: true,
+      impostorCaught: false,
       endedAt: Date.now(),
     }
 
@@ -522,10 +696,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
       currentRound: updatedRound,
       status: "round_finished" as const,
     }
-
+    
     const me = stateRef.current.viewerId
     const myPlayer = updatedPlayers.find((p) => p.id === me)
-    const nextViewAs: ViewAs = myPlayer?.isHost ? "host" : myPlayer?.isImpostor ? "impostor" : "player"
+    const nextViewAs: ViewAs = myPlayer?.isSpectator
+      ? "spectator"
+      : myPlayer?.id === room.hostId
+        ? "host"
+        : myPlayer?.isImpostor
+          ? "impostor"
+          : "player"
     await syncRoom(newRoom, "round_result", nextViewAs)
   }, [])
 
@@ -585,6 +765,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const updatedPlayers = room.players.map((p) => ({
       ...p,
       isImpostor: false,
+      isSpectator: false,
     }))
 
     const newRoom = {
@@ -598,7 +779,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     const me = stateRef.current.viewerId
     const myPlayer = updatedPlayers.find((p) => p.id === me)
-    await syncRoom(newRoom, myPlayer?.isHost ? "host_setup" : "lobby", myPlayer?.isHost ? "host" : "player")
+    const isMeHost = myPlayer?.id === room.hostId
+    await syncRoom(newRoom, isMeHost ? "host_setup" : "lobby", isMeHost ? "host" : "player")
   }, [])
 
   const delegateHost = useCallback(async (playerId: string) => {
@@ -610,17 +792,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
       isHost: p.id === playerId,
     }))
 
-    const newRoom: Room = {
+    const newRoom = syncPlayerHostFlags({
       ...room,
       hostId: playerId,
       players: updatedPlayers,
       status: "ready" as const,
       currentRound: undefined,
-    }
+    })
 
     const me = stateRef.current.viewerId
-    const nextViewAs: ViewAs = me === playerId ? "host" : "player"
-    const nextScreen: Screen = me === playerId ? "host_setup" : "lobby"
+    const nextViewAs: ViewAs = me === newRoom.hostId ? "host" : "player"
+    const nextScreen: Screen = me === newRoom.hostId ? "host_setup" : "lobby"
 
     setState((prev) => ({
       ...prev,
@@ -663,16 +845,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
           let updatedPlayers = remainingPlayers
 
           if (meId === room.hostId) {
-            const nextHost = remainingPlayers[remainingPlayers.length - 1] || remainingPlayers[0]
-            nextHostId = nextHost.id
-            updatedPlayers = remainingPlayers.map((p) =>
-              p.id === nextHostId ? { ...p, isHost: true } : p
-            )
+            const nextHost =
+              [...remainingPlayers].reverse().find((p) => p.connected) ?? remainingPlayers[0]
+            if (nextHost) nextHostId = nextHost.id
+            updatedPlayers = remainingPlayers
           }
 
-          await supabase.from("game_rooms").update({
+          const roomAfterLeave = syncPlayerHostFlags({
+            ...room,
+            hostId: nextHostId,
             players: updatedPlayers,
-            host_id: nextHostId,
+          })
+
+          await supabase.from("game_rooms").update({
+            players: roomAfterLeave.players,
+            host_id: roomAfterLeave.hostId,
             status: "waiting",
             current_round: null,
           }).eq("room_code", room.code)
@@ -704,6 +891,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       castVote,
       addSpokenWord,
       revealResult,
+      hostEndRoundImpostorGuessed,
       submitImpostorGuess,
       skipRound,
       newRound,

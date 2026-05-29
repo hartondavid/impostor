@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { PwaRegister } from "@/components/pwa-register"
+import { ThemeProvider } from "@/components/theme-provider"
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -13,21 +14,21 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  applicationName: "The Impostor",
-  title: "The Impostor — Social Deduction Party Game",
+  applicationName: "Impostor",
+  title: "Impostor — Social Deduction Party Game",
   description:
     "A real-time social deduction party game. One player is the Impostor — they don't know the secret word. Ask clever questions, vote out the Impostor, and don't get fooled.",
   generator: "v0.app",
   appleWebApp: {
     capable: true,
-    title: "The Impostor",
+    title: "Impostor",
     statusBarStyle: "black-translucent",
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
-    title: "The Impostor — Social Deduction Party Game",
+    title: "Impostor — Social Deduction Party Game",
     description: "One player is the Impostor — they don't know the secret word. Find them before they blend in!",
     type: "website",
     images: [
@@ -35,13 +36,13 @@ export const metadata: Metadata = {
         url: "/social.png",
         width: 1200,
         height: 630,
-        alt: "The Impostor Game",
+        alt: "Impostor Game",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "The Impostor — Social Deduction Party Game",
+    title: "Impostor — Social Deduction Party Game",
     description: "One player is the Impostor — they don't know the secret word. Find them before they blend in!",
     images: ["/social.png"],
   },
@@ -70,11 +71,19 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} bg-background dark`}
+      className={`${geistSans.variable} ${geistMono.variable} bg-background`}
+      suppressHydrationWarning
     >
       <body className="font-sans antialiased">
-        <PwaRegister />
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <PwaRegister />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

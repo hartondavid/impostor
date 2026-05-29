@@ -1,29 +1,25 @@
 "use client"
 
-import { useState } from "react"
 import { useGame } from "@/lib/game-context"
 import { useLanguage } from "@/lib/language-context"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { RoomHeader } from "@/components/room-header"
 import { PlayerList } from "@/components/player-list"
-import { ShieldAlert, RotateCcw, Trophy, XCircle, Search } from "lucide-react"
+import { ShieldAlert, RotateCcw, Trophy } from "lucide-react"
 
 export function ResultsScreen() {
-  const { room, newRound, viewerId, submitImpostorGuess } = useGame()
+  const { room, newRound, viewerId } = useGame()
   const { t } = useLanguage()
-  const [guess, setGuess] = useState("")
 
   const round = room?.currentRound
   if (!room || !round) return null
 
   const impostor = room.players.find((p) => p.id === round.impostorId)
   const isImpostorCaught = round.impostorCaught
-  const isViewerImpostor = viewerId === round.impostorId
-  const impostorWon = round.impostorGuessedWord || !isImpostorCaught
-  
-  // If caught, but hasn't guessed yet, Impostor gets a chance
-  const needsLastChance = isImpostorCaught && round.impostorGuessedWord === undefined
+  const isSkipped = room.roundSkipped
+  // Impostorul câștigă DOAR dacă nu a fost prins
+  const impostorWon = !isImpostorCaught && !isSkipped
+  const playersWon = isImpostorCaught && !isSkipped
 
   return (
     <div className="min-h-screen">
@@ -33,20 +29,33 @@ export function ResultsScreen() {
           
           {/* Main Status Card */}
           <div
-            className={`relative overflow-hidden rounded-2xl border p-8 ${impostorWon
-              ? "border-destructive/40 bg-destructive/5" // Impostor won (red)
-              : "border-primary/40 bg-primary/5" // Players won (green)
-              }`}
+            className={`relative overflow-hidden rounded-2xl border p-8 ${
+              isSkipped
+                ? "border-border bg-secondary/20"
+                : impostorWon
+                ? "border-destructive/40 bg-destructive/5"
+                : "border-primary/40 bg-primary/5"
+            }`}
           >
             <div
               aria-hidden
-              className={`pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent ${impostorWon ? "from-destructive/20" : "from-primary/20"
-                }`}
+              className={`pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent ${
+                isSkipped
+                  ? "from-secondary/20"
+                  : impostorWon
+                  ? "from-destructive/20"
+                  : "from-primary/20"
+              }`}
             />
             <div className="relative">
               {/* Badge */}
               <div className="flex items-center gap-2 mb-4">
-                {impostorWon ? (
+                {isSkipped ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/40 px-3 py-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    <RotateCcw className="h-4 w-4" />
+                    {t("roundSkippedResult")}
+                  </span>
+                ) : impostorWon ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-destructive">
                     <ShieldAlert className="h-4 w-4" />
                     {t("impostorWins")}
@@ -61,7 +70,11 @@ export function ResultsScreen() {
 
               {/* Title */}
               <h1 className="text-pretty text-4xl font-bold sm:text-5xl mb-2">
-                {isImpostorCaught ? t("impostorCaught") : t("impostorEscaped")}
+                {isSkipped
+                  ? t("roundSkippedResult")
+                  : isImpostorCaught
+                  ? t("impostorCaught")
+                  : t("impostorEscaped")}
               </h1>
 
               {/* Secret Reveal */}
@@ -78,61 +91,8 @@ export function ResultsScreen() {
                 />
               </div>
 
-              {/* Last Chance Guess UI (Only for Impostor if caught) */}
-              {needsLastChance && (
-                <div className="mt-8 p-6 rounded-xl border border-accent/40 bg-accent/10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Search className="h-5 w-5 text-accent" />
-                    <h3 className="font-bold text-lg text-accent">{t("impostorLastChance")}</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {t("impostorLastChanceDesc")}
-                  </p>
-                  
-                  {isViewerImpostor ? (
-                    <div className="flex gap-2">
-                      <Input 
-                        value={guess}
-                        onChange={(e) => setGuess(e.target.value)}
-                        placeholder={t("impostorGuessPlaceholder")}
-                        className="bg-background"
-                      />
-                      <Button 
-                        onClick={() => submitImpostorGuess(guess)}
-                        disabled={!guess.trim()}
-                        className="bg-accent hover:bg-accent/90 text-black font-bold"
-                      >
-                        {t("impostorGuessSubmit")}
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 p-3 bg-background/50 rounded-lg">
-                      <div className="animate-pulse h-2 w-2 rounded-full bg-accent" />
-                      <span className="text-sm text-muted-foreground">Waiting for Impostor to guess...</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Show the guess if they made one */}
-              {round.impostorGuess && (
-                <div className={`mt-8 p-4 rounded-xl border flex items-center justify-between ${round.impostorGuessedWord ? "border-destructive/40 bg-destructive/10" : "border-primary/40 bg-primary/10"}`}>
-                  <div>
-                    <div className="text-xs font-semibold uppercase text-muted-foreground mb-1">Impostor's Guess</div>
-                    <div className="text-xl font-bold">"{round.impostorGuess}"</div>
-                  </div>
-                  <div className="text-right">
-                    {round.impostorGuessedWord ? (
-                      <span className="text-sm font-bold text-destructive">{t("impostorGuessCorrect")}</span>
-                    ) : (
-                      <span className="text-sm font-bold text-primary">{t("impostorGuessWrong")}</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {/* Next Round CTA */}
-              {!needsLastChance && viewerId === room.hostId && (
+              {viewerId === room.hostId && (
                 <div className="mt-8">
                   <Button onClick={newRound} size="lg" className="w-full sm:w-auto font-bold">
                     <RotateCcw className="mr-2 h-4 w-4" />

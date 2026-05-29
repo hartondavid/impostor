@@ -4,63 +4,69 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
-  Secret Verb - Modern multiplayer party game theme.
-  Palette (5 colors total):
-  - background: deep navy
-  - foreground: warm off-white
-  - primary: vibrant lime (CTAs, primary actions)
-  - accent (host): warm amber / gold
-  - destructive / guesser highlight: coral red
+  Secret Verb theme — light mode (warm & clean) + dark mode (deep navy).
 */
 
+/* ── LIGHT MODE ── */
 :root {
-  --background: oklch(0.16 0.02 260);
-  --foreground: oklch(0.97 0.01 90);
+  --background: oklch(0.98 0.005 60);
+  --foreground: oklch(0.15 0.02 260);
 
-  --card: oklch(0.21 0.02 260);
-  --card-foreground: oklch(0.97 0.01 90);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.02 260);
 
-  --popover: oklch(0.21 0.02 260);
-  --popover-foreground: oklch(0.97 0.01 90);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.02 260);
 
-  /* Vibrant lime — main brand / primary CTA */
-  --primary: oklch(0.86 0.2 130);
-  --primary-foreground: oklch(0.18 0.02 260);
+  /* Light orange — accents (splash, charts); primary stays green in light mode */
+  --orange-light: oklch(0.76 0.15 50);
 
-  --secondary: oklch(0.27 0.02 260);
-  --secondary-foreground: oklch(0.97 0.01 90);
+  /* Green — main brand / primary CTA for light mode */
+  --primary: oklch(0.65 0.18 140);
+  --primary-foreground: oklch(0.98 0.01 150);
 
-  --muted: oklch(0.25 0.02 260);
-  --muted-foreground: oklch(0.7 0.02 260);
+  --secondary: oklch(0.93 0.01 60);
+  --secondary-foreground: oklch(0.15 0.02 260);
 
-  /* Warm amber — host badges, secondary highlights */
-  --accent: oklch(0.82 0.16 75);
-  --accent-foreground: oklch(0.18 0.02 260);
+  --muted: oklch(0.94 0.01 60);
+  --muted-foreground: oklch(0.50 0.02 260);
 
-  /* Coral red — destructive + guesser role */
-  --destructive: oklch(0.68 0.21 25);
-  --destructive-foreground: oklch(0.98 0.01 90);
+  /* Coral red — destructive */
+  --destructive: oklch(0.60 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
 
-  --border: oklch(0.3 0.02 260);
-  --input: oklch(0.27 0.02 260);
-  --ring: oklch(0.86 0.2 130);
+  /* Green secondary highlight */
+  --accent: oklch(0.65 0.18 140);
+  --accent-foreground: oklch(0.98 0.01 150);
 
-  --chart-1: oklch(0.86 0.2 130);
-  --chart-2: oklch(0.82 0.16 75);
-  --chart-3: oklch(0.68 0.21 25);
-  --chart-4: oklch(0.7 0.12 200);
-  --chart-5: oklch(0.97 0.01 90);
+  --border: oklch(0.88 0.01 60);
+  --input: oklch(0.90 0.01 60);
+  --ring: oklch(0.65 0.18 140);
+
+  /* Segmented controls (Custom / Random, etc.) */
+  --option-outline: oklch(0.65 0.18 140);
+
+  --chart-1: oklch(0.65 0.18 140);
+  --chart-2: oklch(0.60 0.22 25);
+  --chart-3: oklch(0.65 0.20 50);
+  --chart-4: oklch(0.60 0.12 200);
+  --chart-5: oklch(0.15 0.02 260);
 
   --radius: 0.875rem;
 
-  --sidebar: oklch(0.21 0.02 260);
-  --sidebar-foreground: oklch(0.97 0.01 90);
-  --sidebar-primary: oklch(0.86 0.2 130);
-  --sidebar-primary-foreground: oklch(0.18 0.02 260);
-  --sidebar-accent: oklch(0.27 0.02 260);
-  --sidebar-accent-foreground: oklch(0.97 0.01 90);
-  --sidebar-border: oklch(0.3 0.02 260);
-  --sidebar-ring: oklch(0.86 0.2 130);
+  --sidebar: oklch(0.96 0.01 60);
+  --sidebar-foreground: oklch(0.15 0.02 260);
+  --sidebar-primary: oklch(0.65 0.18 140);
+  --sidebar-primary-foreground: oklch(0.98 0.01 150);
+  --sidebar-accent: oklch(0.93 0.01 60);
+  --sidebar-accent-foreground: oklch(0.15 0.02 260);
+  --sidebar-border: oklch(0.88 0.01 60);
+  --sidebar-ring: oklch(0.65 0.18 140);
+
+  /* Landing feature icons — same in light and dark */
+  --feature-yellow: oklch(0.78 0.15 92);
+  --feature-red: oklch(0.62 0.22 25);
+  --feature-green: oklch(0.65 0.18 140);
 }
 
 .dark {
@@ -70,19 +76,21 @@
   --card-foreground: oklch(0.97 0.01 90);
   --popover: oklch(0.21 0.02 260);
   --popover-foreground: oklch(0.97 0.01 90);
-  --primary: oklch(0.86 0.2 130);
-  --primary-foreground: oklch(0.18 0.02 260);
+  /* Amber/gold — main brand / primary CTA */
+  --primary: oklch(0.82 0.16 75);
+  --primary-foreground: oklch(0.12 0.02 60);
   --secondary: oklch(0.27 0.02 260);
   --secondary-foreground: oklch(0.97 0.01 90);
   --muted: oklch(0.25 0.02 260);
   --muted-foreground: oklch(0.7 0.02 260);
   --accent: oklch(0.82 0.16 75);
-  --accent-foreground: oklch(0.18 0.02 260);
+  --accent-foreground: oklch(0.12 0.02 60);
   --destructive: oklch(0.68 0.21 25);
   --destructive-foreground: oklch(0.98 0.01 90);
   --border: oklch(0.3 0.02 260);
   --input: oklch(0.27 0.02 260);
-  --ring: oklch(0.86 0.2 130);
+  --ring: oklch(0.82 0.16 75);
+  --option-outline: oklch(0.82 0.16 75);
 }
 
 @theme inline {
@@ -107,6 +115,11 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-option-outline: var(--option-outline);
+  --color-orange-light: var(--orange-light);
+  --color-feature-yellow: var(--feature-yellow);
+  --color-feature-red: var(--feature-red);
+  --color-feature-green: var(--feature-green);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);

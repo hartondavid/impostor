@@ -15,6 +15,7 @@ export interface Player {
   score: number
   // Tracks whether this player has already been the impostor in the current cycle
   hasBeenImpostor: boolean
+  isSpectator?: boolean
 }
 
 export interface WordPack {
@@ -86,4 +87,4 @@ export type Screen =
   | "round_result"
 
 // In our demo the same browser can switch perspective between roles.
-export type ViewAs = "host" | "impostor" | "player"
+export type ViewAs = "host" | "impostor" | "player" | "spectator"

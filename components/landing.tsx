@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useGame } from "@/lib/game-context"
 import { useLanguage } from "@/lib/language-context"
+import { useTheme } from "next-themes"
 import { LanguageSelector } from "@/components/language-selector"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -47,12 +49,27 @@ const REVOLUT_SUPPORT_URL =
 export function Landing() {
   const { createRoom, joinRoom } = useGame()
   const { t } = useLanguage()
+  const { theme } = useTheme()
   const install = useInstallAppPrompt()
   const [hostName, setHostName] = useState("")
   const [joinCode, setJoinCode] = useState("")
   const [joinName, setJoinName] = useState("")
   const [createOpen, setCreateOpen] = useState(false)
   const [joinOpen, setJoinOpen] = useState(false)
+
+  const heroTitleText = t("heroTitle")
+  const [displayedTitle, setDisplayedTitle] = useState("")
+
+  useEffect(() => {
+    let i = 0
+    setDisplayedTitle("")
+    const id = setInterval(() => {
+      i++
+      setDisplayedTitle(heroTitleText.slice(0, i))
+      if (i >= heroTitleText.length) clearInterval(id)
+    }, 50)
+    return () => clearInterval(id)
+  }, [heroTitleText])
 
   return (
     <div className="bg-grid relative isolate min-h-screen overflow-hidden">
@@ -61,7 +78,7 @@ export function Landing() {
       {/* Glow accents */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-32 left-1/2 z-[1] h-[500px] w-[70%] -translate-x-1/2 rounded-full bg-destructive/8 blur-3xl"
+        className="pointer-events-none absolute -top-32 left-1/2 z-[1] h-[500px] w-[70%] -translate-x-1/2 rounded-full bg-primary/8 blur-3xl"
       />
       <div
         aria-hidden
@@ -122,6 +139,7 @@ export function Landing() {
             </DropdownMenuContent>
           </DropdownMenu>
           <LanguageSelector />
+          <ThemeToggle />
         </div>
       </header>
 
@@ -129,18 +147,19 @@ export function Landing() {
       <main className="relative z-10 mx-auto flex max-w-6xl flex-col items-center px-4 py-12 sm:px-6 sm:py-20">
 
         {/* Badge */}
-        <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive backdrop-blur">
+        <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary backdrop-blur">
           <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-destructive" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
           </span>
           Social Deduction · Party Game
         </span>
 
         <h1 className="text-balance text-center text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl">
-          {t("heroTitle")}
+          {displayedTitle}
+          <span className="animate-pulse border-r-2 border-primary ml-1 inline-block h-[1em] align-middle"></span>
         </h1>
-        <p className="mt-4 text-center text-xl font-medium text-destructive sm:text-2xl">
+        <p className="mt-4 text-center text-xl font-medium text-primary sm:text-2xl">
           {t("heroTagline")}
         </p>
 
@@ -156,7 +175,7 @@ export function Landing() {
             <DialogTrigger asChild>
               <Button
                 id="create-room-btn"
-                className="flex-1 h-14 rounded-full bg-destructive text-white hover:bg-destructive/90 hover:-translate-y-0.5 active:scale-[0.98] border-none font-bold text-base transition-all shadow-xl shadow-destructive/25 group"
+                className="flex-1 h-14 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 hover:-translate-y-0.5 active:scale-[0.98] border-none font-bold text-base transition-all shadow-xl shadow-primary/25 group"
               >
                 {t("createRoom")}
                 <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
@@ -191,7 +210,7 @@ export function Landing() {
                   {t("cancel")}
                 </Button>
                 <Button
-                  className="rounded-full h-11 px-8 font-semibold bg-destructive hover:bg-destructive/90 text-white"
+                  className="rounded-full h-11 px-8 font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
                   onClick={() => {
                     createRoom(hostName.trim() || "Host")
                     setCreateOpen(false)
@@ -275,22 +294,22 @@ export function Landing() {
           </p>
           <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
             <FeatureCard
-              icon={<Eye className="h-5 w-5 text-destructive" />}
-              iconBg="bg-destructive/10 border-destructive/20"
+              icon={<Eye className="h-5 w-5 text-feature-yellow" />}
+              iconBg="bg-feature-yellow/10 border-feature-yellow/20"
               step="01"
               title={t("featureSocialTitle")}
               description={t("featureSocialDesc")}
             />
             <FeatureCard
-              icon={<ShieldAlert className="h-5 w-5 text-accent" />}
-              iconBg="bg-accent/10 border-accent/20"
+              icon={<ShieldAlert className="h-5 w-5 text-feature-red" />}
+              iconBg="bg-feature-red/10 border-feature-red/20"
               step="02"
               title={t("featureDeceptionTitle")}
               description={t("featureDeceptionDesc")}
             />
             <FeatureCard
-              icon={<Users className="h-5 w-5 text-primary" />}
-              iconBg="bg-primary/10 border-primary/20"
+              icon={<Users className="h-5 w-5 text-feature-green" />}
+              iconBg="bg-feature-green/10 border-feature-green/20"
               step="03"
               title={t("featurePartyTitle")}
               description={t("featurePartyDesc")}

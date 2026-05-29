@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input"
 import { MessageSquarePlus } from "lucide-react"
 
 export function SpokenWordsLog() {
-  const { room, viewerId, addSpokenWord } = useGame()
-  const { t } = useLanguage()
+  const { room, viewerId, addSpokenWord, viewer } = useGame()
+  const { t, language } = useLanguage()
   const [text, setText] = useState("")
   const logEndRef = useRef<HTMLDivElement>(null)
 
@@ -50,21 +50,32 @@ export function SpokenWordsLog() {
             return (
               <div
                 key={w.id}
-                className={`flex flex-col max-w-[85%] ${
-                  isMe ? "ml-auto items-end" : "mr-auto items-start"
+                className={`flex max-w-[85%] gap-2 ${
+                  isMe ? "ml-auto flex-row-reverse" : "mr-auto flex-row"
                 }`}
               >
-                <span className="text-[10px] font-semibold uppercase text-muted-foreground mb-0.5 px-1">
-                  {isMe ? t("you") : player?.name || "Unknown"}
-                </span>
                 <div
-                  className={`rounded-2xl px-4 py-2 text-sm ${
-                    isMe
-                      ? "bg-primary text-primary-foreground rounded-tr-sm"
-                      : "bg-secondary text-secondary-foreground rounded-tl-sm"
-                  }`}
+                  className="flex shrink-0 items-center justify-center rounded-full text-[10px] font-bold h-7 w-7 mt-0.5"
+                  style={{
+                    backgroundColor: `color-mix(in oklab, ${player?.avatarColor || "currentColor"} 25%, transparent)`,
+                    color: player?.avatarColor || "currentColor",
+                  }}
                 >
-                  {w.text}
+                  {(player?.name || "U").charAt(0).toUpperCase()}
+                </div>
+                <div className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                  <span className="text-[10px] font-semibold uppercase text-muted-foreground mb-0.5 px-1">
+                    {isMe ? t("you") : player?.name || "Unknown"}
+                  </span>
+                  <div
+                    className={`rounded-2xl px-4 py-2 text-sm ${
+                      isMe
+                        ? "bg-primary text-primary-foreground rounded-tr-sm"
+                        : "bg-secondary text-secondary-foreground rounded-tl-sm"
+                    }`}
+                  >
+                    {w.text}
+                  </div>
                 </div>
               </div>
             )
@@ -74,18 +85,26 @@ export function SpokenWordsLog() {
       </div>
 
       <div className="p-3 border-t border-border bg-card">
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <Input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={t("typeWordPlaceholder")}
-            className="flex-1 bg-background"
-            maxLength={60}
-          />
-          <Button type="submit" disabled={!text.trim()} size="sm">
-            {t("addWordBtn")}
-          </Button>
-        </form>
+        {viewer?.isSpectator ? (
+          <div className="text-center text-xs text-blue-500 font-semibold py-2">
+            {language === "ro" 
+              ? "Spectatorii pot doar asista, fără a trimite indicii." 
+              : "Spectators can only watch, without sending clues."}
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <Input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={t("typeWordPlaceholder")}
+              className="flex-1 bg-background"
+              maxLength={60}
+            />
+            <Button type="submit" disabled={!text.trim()} size="sm">
+              {t("addWordBtn")}
+            </Button>
+          </form>
+        )}
       </div>
     </div>
   )

@@ -9,12 +9,11 @@ export const MOCK_NAMES = [
   "Finn", "Aria", "Eli", "Nova", "Theo",
 ]
 
-// Avatar accent colors – kept minimal & on-brand.
+// Avatar accent colors – distinct palette for each player
 const AVATAR_COLORS = [
-  "var(--primary)",
-  "var(--accent)",
-  "var(--destructive)",
-  "var(--muted-foreground)",
+  "#ef4444", "#3b82f6", "#22c55e", "#eab308",
+  "#f97316", "#a855f7", "#ec4899", "#06b6d4",
+  "#84cc16", "#8b5cf6", "#14b8a6", "#f43f5e"
 ]
 
 export function makeMockPlayer(
@@ -37,58 +36,58 @@ export function makeMockPlayer(
 // Romanian themed word packs for The Impostor
 export const WORD_PACKS_RO: WordPack[] = [
   // Locații
-  { id: "plaja", emoji: "🏖️", category: "Locație", word: "Plajă" },
-  { id: "spital", emoji: "🏥", category: "Locație", word: "Spital" },
-  { id: "cazinou", emoji: "🎰", category: "Locație", word: "Cazinou" },
-  { id: "submarin", emoji: "🚢", category: "Locație", word: "Submarin" },
-  { id: "aeroport", emoji: "✈️", category: "Locație", word: "Aeroport" },
-  { id: "inchisoare", emoji: "⛓️", category: "Locație", word: "Închisoare" },
-  { id: "circ", emoji: "🎪", category: "Locație", word: "Circ" },
-  { id: "statie_spatiala", emoji: "🚀", category: "Locație", word: "Stație Spațială" },
-  { id: "restaurant", emoji: "🍽️", category: "Locație", word: "Restaurant" },
-  { id: "banca", emoji: "🏦", category: "Locație", word: "Bancă" },
-  { id: "muzeu", emoji: "🏛️", category: "Locație", word: "Muzeu" },
-  { id: "biblioteca", emoji: "📚", category: "Locație", word: "Bibliotecă" },
-  { id: "sala_sport", emoji: "🏋️", category: "Locație", word: "Sală de Sport" },
-  { id: "cinema", emoji: "🎬", category: "Locație", word: "Cinema" },
-  { id: "ferma", emoji: "🌾", category: "Locație", word: "Fermă" },
+  { id: "plaja", category: "Locație", word: "Plajă" },
+  { id: "spital",  category: "Locație", word: "Spital" },
+  { id: "cazinou",  category: "Locație", word: "Cazinou" },
+  { id: "submarin",  category: "Locație", word: "Submarin" },
+  { id: "aeroport",  category: "Locație", word: "Aeroport" },
+  { id: "inchisoare",  category: "Locație", word: "Închisoare" },
+  { id: "circ",  category: "Locație", word: "Circ" },
+  { id: "statie_spatiala",  category: "Locație", word: "Stație Spațială" },
+  { id: "restaurant",  category: "Locație", word: "Restaurant" },
+  { id: "banca",  category: "Locație", word: "Bancă" },
+  { id: "muzeu",  category: "Locație", word: "Muzeu" },
+  { id: "biblioteca",  category: "Locație", word: "Bibliotecă" },
+  { id: "sala_sport",  category: "Locație", word: "Sală de Sport" },
+  { id: "cinema",  category: "Locație", word: "Cinema" },
+  { id: "ferma",  category: "Locație", word: "Fermă" },
 
   // Personaje / Profesii
-  { id: "spion", emoji: "🕵️", category: "Persoană", word: "Spion" },
-  { id: "pirat", emoji: "🏴‍☠️", category: "Persoană", word: "Pirat" },
-  { id: "chirurg", emoji: "👨‍⚕️", category: "Persoană", word: "Chirurg" },
-  { id: "astronaut", emoji: "👨‍🚀", category: "Persoană", word: "Astronaut" },
-  { id: "bucatar", emoji: "👨‍🍳", category: "Persoană", word: "Bucătar" },
-  { id: "magician", emoji: "🎩", category: "Persoană", word: "Magician" },
-  { id: "pompier", emoji: "🚒", category: "Persoană", word: "Pompier" },
-  { id: "profesor", emoji: "👨‍🏫", category: "Persoană", word: "Profesor" },
-  { id: "detectiv", emoji: "🔍", category: "Persoană", word: "Detectiv" },
-  { id: "rege", emoji: "👑", category: "Persoană", word: "Rege" },
-  { id: "vampir", emoji: "🧛", category: "Persoană", word: "Vampir" },
-  { id: "robot", emoji: "🤖", category: "Persoană", word: "Robot" },
-  { id: "supererou", emoji: "🦸", category: "Persoană", word: "Supererou" },
+  { id: "spion",  category: "Persoană", word: "Spion" },
+  { id: "pirat",  category: "Persoană", word: "Pirat" },
+  { id: "chirurg",  category: "Persoană", word: "Chirurg" },
+  { id: "astronaut",  category: "Persoană", word: "Astronaut" },
+  { id: "bucatar",  category: "Persoană", word: "Bucătar" },
+  { id: "magician",  category: "Persoană", word: "Magician" },
+  { id: "pompier",  category: "Persoană", word: "Pompier" },
+  { id: "profesor",  category: "Persoană", word: "Profesor" },
+  { id: "detectiv",  category: "Persoană", word: "Detectiv" },
+  { id: "rege",  category: "Persoană", word: "Rege" },
+  { id: "vampir",  category: "Persoană", word: "Vampir" },
+  { id: "robot",  category: "Persoană", word: "Robot" },
+  { id: "supererou",  category: "Persoană", word: "Supererou" },
 
   // Obiecte
-  { id: "pizza_ro", emoji: "🍕", category: "Obiect", word: "Pizza" },
-  { id: "telescop", emoji: "🔭", category: "Obiect", word: "Telescop" },
-  { id: "parasuta", emoji: "🪂", category: "Obiect", word: "Parașută" },
-  { id: "diamant", emoji: "💎", category: "Obiect", word: "Diamant" },
-  { id: "chitara", emoji: "🎸", category: "Obiect", word: "Chitară" },
-  { id: "umbrela", emoji: "☂️", category: "Obiect", word: "Umbrelă" },
-  { id: "busola", emoji: "🧭", category: "Obiect", word: "Busolă" },
-  { id: "trofeu", emoji: "🏆", category: "Obiect", word: "Trofeu" },
-  { id: "microscop", emoji: "🔬", category: "Obiect", word: "Microscop" },
-  { id: "lumanare", emoji: "🕯️", category: "Obiect", word: "Lumânare" },
+  { id: "pizza_ro",  category: "Obiect", word: "Pizza" },
+  { id: "telescop",  category: "Obiect", word: "Telescop" },
+  { id: "parasuta",  category: "Obiect", word: "Parașută" },
+  { id: "diamant",  category: "Obiect", word: "Diamant" },
+  { id: "chitara",  category: "Obiect", word: "Chitară" },
+  { id: "umbrela",  category: "Obiect", word: "Umbrelă" },
+  { id: "busola",  category: "Obiect", word: "Busolă" },
+  { id: "trofeu",  category: "Obiect", word: "Trofeu" },
+  { id: "microscop", category: "Obiect", word: "Microscop" },
+  { id: "lumanare",  category: "Obiect", word: "Lumânare" },
 
   // Evenimente
-  { id: "nunta", emoji: "💍", category: "Eveniment", word: "Nuntă" },
-  { id: "olimpiada", emoji: "🏅", category: "Eveniment", word: "Olimpiadă" },
-  { id: "inmormantare", emoji: "⚰️", category: "Eveniment", word: "Înmormântare" },
-  { id: "zi_nastere", emoji: "🎂", category: "Eveniment", word: "Zi de Naștere" },
-  { id: "revelion", emoji: "🎆", category: "Eveniment", word: "Revelion" },
-  { id: "absolvire", emoji: "🎓", category: "Eveniment", word: "Absolvire" },
-  { id: "concert", emoji: "🎤", category: "Eveniment", word: "Concert" },
-  { id: "cupa_mondiala", emoji: "⚽", category: "Eveniment", word: "Cupa Mondială" },
+  { id: "nunta",  category: "Eveniment", word: "Nuntă" },
+  { id: "olimpiada",  category: "Eveniment", word: "Olimpiadă" },
+  { id: "inmormantare",  category: "Eveniment", word: "Înmormântare" },
+  { id: "zi_nastere",  category: "Eveniment", word: "Zi de Naștere" },
+  { id: "revelion",  category: "Eveniment", word: "Revelion" },
+  { id: "absolvire",  category: "Eveniment", word: "Absolvire" },
+  { id: "concert",  category: "Eveniment", word: "Concert" },
+  { id: "cupa_mondiala", category: "Eveniment", word: "Cupa Mondială" },
 ]
 
 export const WORD_PACKS: Record<Language, WordPack[]> = {
@@ -120,7 +119,7 @@ export function getWordPackById(id: string, lang: Language = "en"): WordPack | u
 // Pick next impostor using rotation logic:
 // Everyone gets a turn before anyone repeats.
 function pickNextImpostor(room: import("./types").Room): { player: Player; cycleReset: boolean } {
-  const eligible = room.players.filter((p) => !p.isHost)
+  const eligible = room.players
 
   if (eligible.length === 0) {
     return { player: room.players[0], cycleReset: false }

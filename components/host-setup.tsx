@@ -20,6 +20,7 @@ import { toast } from "sonner"
 import { DelegateHostCard } from "@/components/delegate-host"
 import { CATEGORIES_EN } from "@/lib/mock-data-en"
 import type { WordPack } from "@/lib/types"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 // Host-only screen for choosing the secret word/category.
 // Guesser (Impostor) selection is now automatic and secret upon starting the round.
@@ -40,6 +41,7 @@ export function HostSetup() {
   const [selectedPack, setSelectedPack] = useState<WordPack | null>(null)
   const [customWord, setCustomWord] = useState("")
   const [customCategory, setCustomCategory] = useState("")
+  const [activeTab, setActiveTab] = useState("custom")
 
   if (!room) return null
   const isViewerHost = room.hostId === viewerId
@@ -62,7 +64,11 @@ export function HostSetup() {
       return
     }
 
-    if (customWord.trim().length >= 2) {
+    if (activeTab === "custom") {
+      if (customWord.trim().length < 2) {
+        toast.error(t("hostNoWordWarning") || "Please enter a word.");
+        return;
+      }
       const pack = await generateWord(customWord, customCategory, gameLanguage)
       if (pack) {
         startRound(pack, "manual", gameLanguage)
@@ -70,15 +76,16 @@ export function HostSetup() {
       return
     }
 
-    if (!selectedPack) {
-      toast.error(t("hostNoWordWarning"))
-      return
+    if (activeTab === "random") {
+      if (!selectedPack) {
+        toast.error(t("hostNoWordWarning"))
+        return
+      }
+      startRound(selectedPack, "random", gameLanguage)
     }
-
-    startRound(selectedPack, "random", gameLanguage)
   }
 
-  const canStartRound = (selectedPack !== null) || (customWord.trim().length >= 2)
+  const canStartRound = activeTab === "custom" ? customWord.trim().length >= 2 : selectedPack !== null
 
   if (!isViewerHost) {
     return (
@@ -130,39 +137,46 @@ export function HostSetup() {
           <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
             <h2 className="font-semibold text-base">{t("hostChooseWord")}</h2>
 
-            <div className="space-y-4">
-              <FieldGroup>
-                <Field>
-                  <FieldLabel htmlFor="custom-word">{t("hostWordOrGenerate")}</FieldLabel>
-                  <Input
-                    id="custom-word"
-                    placeholder={t("hostVerbPlaceholderOptional")}
-                    value={customWord}
-                    onChange={(e) => {
-                      setCustomWord(e.target.value)
-                      if (selectedPack) setSelectedPack(null)
-                    }}
-                    maxLength={48}
-                  />
-                  <FieldDescription>{t("hostVerbOrGenerateHint")}</FieldDescription>
-                </Field>
-                
-                {customWord.trim().length >= 2 && (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="custom">Custom</TabsTrigger>
+                <TabsTrigger value="random">Random</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="custom" className="space-y-4">
+                <FieldGroup>
                   <Field>
-                    <FieldLabel htmlFor="custom-category">{t("hostCategoryLabel")}</FieldLabel>
+                    <FieldLabel htmlFor="custom-word">{t("hostWordOrGenerate")}</FieldLabel>
                     <Input
-                      id="custom-category"
-                      placeholder="e.g. Location, Object, Person..."
-                      value={customCategory}
-                      onChange={(e) => setCustomCategory(e.target.value)}
-                      maxLength={24}
+                      id="custom-word"
+                      placeholder={t("hostVerbPlaceholderOptional")}
+                      value={customWord}
+                      onChange={(e) => {
+                        setCustomWord(e.target.value)
+                        if (selectedPack) setSelectedPack(null)
+                      }}
+                      maxLength={48}
                     />
-                    <FieldDescription>This is the only clue the Impostor will get.</FieldDescription>
+                    <FieldDescription>{t("hostVerbOrGenerateHint")}</FieldDescription>
                   </Field>
-                )}
-              </FieldGroup>
+                  
+                  {customWord.trim().length >= 2 && (
+                    <Field>
+                      <FieldLabel htmlFor="custom-category">{t("hostCategoryLabel")}</FieldLabel>
+                      <Input
+                        id="custom-category"
+                        placeholder="e.g. Location, Object, Person..."
+                        value={customCategory}
+                        onChange={(e) => setCustomCategory(e.target.value)}
+                        maxLength={24}
+                      />
+                      <FieldDescription>This is the only clue the Impostor will get.</FieldDescription>
+                    </Field>
+                  )}
+                </FieldGroup>
+              </TabsContent>
 
-              {!customWord && (
+              <TabsContent value="random" className="space-y-4">
                 <Button
                   type="button"
                   variant="outline"
@@ -177,25 +191,26 @@ export function HostSetup() {
                   )}
                   {t("hostGenerateWord")}
                 </Button>
-              )}
 
-              {selectedPack && !customWord && (
-                <div className="mt-4 p-4 rounded-xl border border-primary/30 bg-primary/5 flex items-center justify-between">
-                  <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                      {selectedPack.category} {selectedPack.emoji}
+                {selectedPack && (
+                  <div className="mt-4 p-4 rounded-xl border border-primary/30 bg-primary/5 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                        {selectedPack.category} {selectedPack.emoji}
+                      </div>
+                      <div className="text-xl font-bold">{selectedPack.word}</div>
                     </div>
-                    <div className="text-xl font-bold">{selectedPack.word}</div>
                   </div>
-                </div>
-              )}
+                )}
+              </TabsContent>
+            </Tabs>
 
               <div className="pt-4 border-t border-border">
                 <Button
                   onClick={onStartRound}
                   disabled={!canStartRound || room.players.length < 3}
                   size="lg"
-                  className="w-full sm:w-fit bg-destructive hover:bg-destructive/90 text-white"
+                  className="w-full sm:w-fit bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   <Sparkles className="mr-2 h-5 w-5" />
                   {t("hostGenAndStart")}
@@ -214,7 +229,6 @@ export function HostSetup() {
                 </span>
               </div>
             )}
-          </div>
         </section>
 
         <aside className="space-y-6">

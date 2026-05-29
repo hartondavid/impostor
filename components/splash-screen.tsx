@@ -41,7 +41,7 @@ export function SplashGate({ children }: { children: React.ReactNode }) {
       {mounted && (
         <div
           role="dialog"
-          aria-label={t("secretVerb")}
+          aria-label={t("appName")}
           aria-modal="true"
           className={cn(
             "fixed inset-0 z-[200] flex flex-col items-center justify-center gap-6 bg-background px-6 transition-opacity duration-300 ease-out motion-reduce:transition-none",
@@ -55,7 +55,7 @@ export function SplashGate({ children }: { children: React.ReactNode }) {
               "motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-500",
             )}
           >
-            <div className="relative flex h-28 w-28 items-center justify-center rounded-3xl bg-primary/15 shadow-lg shadow-primary/15 ring-1 ring-primary/25">
+            <div className="relative flex h-28 w-28 items-center justify-center rounded-3xl bg-orange-light/15 shadow-lg shadow-orange-light/15 ring-1 ring-orange-light/25">
               <Image
                 src="/icon.png"
                 alt=""
@@ -67,7 +67,7 @@ export function SplashGate({ children }: { children: React.ReactNode }) {
             </div>
             <div>
               <h1 className="text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                {t("secretVerb")}
+                {t("appName")}
               </h1>
               <p className="mt-2 text-sm text-muted-foreground sm:text-base">{t("subtitle")}</p>
             </div>

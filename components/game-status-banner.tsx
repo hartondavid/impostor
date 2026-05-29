@@ -2,7 +2,7 @@
 
 import type { ViewAs } from "@/lib/types"
 import { useLanguage } from "@/lib/language-context"
-import { Crown, Eye, Users } from "lucide-react"
+import { Crown, Eye, Users, Ghost } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface GameStatusBannerProps {
@@ -30,10 +30,10 @@ export function GameStatusBanner({
     },
     impostor: {
       icon: Eye,
-      ring: "ring-destructive/30",
-      glow: "from-destructive/20",
-      pill: "bg-destructive/15 text-destructive border-destructive/30",
-      iconColor: "text-destructive",
+      ring: "ring-primary/30",
+      glow: "from-primary/20",
+      pill: "bg-primary/15 text-primary border-primary/30",
+      iconColor: "text-primary",
       label: t("impostor"),
     },
     player: {
@@ -43,6 +43,14 @@ export function GameStatusBanner({
       pill: "bg-primary/15 text-primary border-primary/30",
       iconColor: "text-primary",
       label: t("player"),
+    },
+    spectator: {
+      icon: Ghost,
+      ring: "ring-blue-500/30",
+      glow: "from-blue-500/20",
+      pill: "bg-blue-500/15 text-blue-500 border-blue-500/30",
+      iconColor: "text-blue-500",
+      label: t("spectator"),
     },
   }[viewAs]
 

@@ -3,13 +3,13 @@ export type Language = "en" | "ro"
 export const translations = {
   en: {
     // App branding
-    appName: "The Impostor",
+    appName: "Impostor",
     subtitle: "Social Deduction · Party Game · Real-time",
 
     // Landing
     heroTitle: "Can you spot the Impostor?",
     heroTagline: "Before they fool everyone.",
-    landingDesc: "One player doesn't know the secret word. Everyone else does. Ask clever questions, avoid obvious answers, and vote out the Impostor before they blend in.",
+    landingDesc: "One player doesn't know the secret word. Everyone else does. Talk smart words and vote out the Impostor before they blend in.",
     createRoom: "Create room",
     joinRoom: "Join room",
     createNewRoom: "Create a new room",
@@ -25,11 +25,11 @@ export const translations = {
     roomCodePlaceholder: "A1B2",
     // Feature cards
     featureSocialTitle: "Social Deduction",
-    featureSocialDesc: "Ask clever questions, give vague answers, and expose the Impostor.",
+    featureSocialDesc: "Just words. Vague answers. Expose the Impostor.",
     featureDeceptionTitle: "Deception",
     featureDeceptionDesc: "The Impostor has one clue — the category. Bluff your way to victory.",
     featurePartyTitle: "Party Ready",
-    featurePartyDesc: "No app needed for friends — one phone hosts the whole game.",
+    featurePartyDesc: "Every friend can see on his phone what role they play in the game.",
     landingMenu: "Menu",
     downloadApp: "Download app",
     installAppHint: "Use your browser menu: 'Install app' or 'Add to Home Screen'.",
@@ -98,9 +98,9 @@ export const translations = {
     hostPicked: "Selected",
 
     // In-game — Player View (knows the word)
-    playerTitle: "You know the secret word",
-    playerSubtitle1: "doesn't know the word. Give vague-but-honest answers.",
-    playerSubtitle2: "The Impostor",
+    playerTitle: "You are impostor or not",
+    playerSubtitle1: "you will see the impostor word.",
+    playerSubtitle2: "If you are impostor",
     secretWordLabel: "Secret word",
     categoryLabel: "Category",
     revealInstruction: "Hold the eye icon to reveal. The Impostor",
@@ -132,10 +132,12 @@ export const translations = {
     youVotedFor: "You voted for",
     revealResult: "Reveal Result",
     votingProgress: "players have voted",
+    votingTie: "Tie vote! No one is eliminated and the round continues.",
 
     // Results Screen
     impostorCaught: "Impostor Caught!",
     impostorEscaped: "Impostor Escaped!",
+    roundSkippedResult: "Round Skipped",
     impostorWasLabel: "The Impostor was",
     secretWordReveal: "The secret word was",
     impostorLastChance: "Last chance, Impostor!",
@@ -172,17 +174,22 @@ export const translations = {
     youAreThe: "You are the",
     playersCount: "Players",
     hostSettings: "Host settings",
+    spectator: "Spectator",
+    spectatorTitle: "You are a Spectator",
+    spectatorSubtitle: "You were voted out. Watch the game but don't reveal anything!",
+    hostImpostorGuessed: "Impostor guessed word",
+    hostImpostorGuessedDesc: "End round if the Impostor guesses the word out loud.",
   },
 
   ro: {
     // App branding
-    appName: "Impostorul",
+    appName: "Impostor",
     subtitle: "Deducție Socială · Joc de Petrecere · Timp Real",
 
     // Landing
     heroTitle: "Poți descoperi Impostorul?",
     heroTagline: "Înainte să-i păcălească pe toți.",
-    landingDesc: "Un jucător nu știe cuvântul secret. Toți ceilalți știu. Pune întrebări inteligente, evită răspunsurile evidente și votează Impostorul înainte să se integreze.",
+    landingDesc: "Un jucător nu știe cuvântul secret. Toți ceilalți știu. Rostește cuvinte inteligente și votează Impostorul înainte să se integreze.",
     createRoom: "Creează cameră",
     joinRoom: "Intră în cameră",
     createNewRoom: "Creează o cameră nouă",
@@ -198,11 +205,11 @@ export const translations = {
     roomCodePlaceholder: "A1B2",
     // Feature cards
     featureSocialTitle: "Deducție Socială",
-    featureSocialDesc: "Pune întrebări inteligente, dă răspunsuri vagi și expune Impostorul.",
+    featureSocialDesc: "Doar cuvinte. Răspunsuri vagi. Expu-ne Impostorul.",
     featureDeceptionTitle: "Înșelăciune",
     featureDeceptionDesc: "Impostorul are un singur indiciu — categoria. Blufează până la victorie.",
     featurePartyTitle: "Pentru Petreceri",
-    featurePartyDesc: "Prietenii nu au nevoie de aplicație — un singur telefon conduce tot jocul.",
+    featurePartyDesc: "Fiecare prieten poate vedea pe telefonul său ce rol joacă în joc.",
     landingMenu: "Meniu",
     downloadApp: "Descarcă aplicația",
     installAppHint: "Din meniul browserului: 'Instalează aplicația' sau 'Adaugă pe ecranul principal'.",
@@ -271,9 +278,9 @@ export const translations = {
     hostPicked: "Selectat",
 
     // In-game — Player View
-    playerTitle: "Cunoști cuvântul secret",
-    playerSubtitle1: "nu știe cuvântul. Dă răspunsuri vagi, dar oneste.",
-    playerSubtitle2: "Impostorul",
+    playerTitle: "Ești impostor sau nu",
+    playerSubtitle1: "vei vedea cuvântul impostor. ",
+    playerSubtitle2: "Dacă ești impostor",
     secretWordLabel: "Cuvântul secret",
     categoryLabel: "Categorie",
     revealInstruction: "Ține pe iconița de ochi pentru a dezvălui. Impostorul",
@@ -305,10 +312,12 @@ export const translations = {
     youVotedFor: "Ai votat pentru",
     revealResult: "Dezvăluie Rezultatul",
     votingProgress: "jucători au votat",
+    votingTie: "Egalitate de voturi! Nimeni nu este eliminat și jocul continuă.",
 
     // Results Screen
     impostorCaught: "Impostor Prins!",
     impostorEscaped: "Impostorul a Scăpat!",
+    roundSkippedResult: "Rundă Anulată",
     impostorWasLabel: "Impostorul era",
     secretWordReveal: "Cuvântul secret era",
     impostorLastChance: "Ultima șansă, Impostorule!",
@@ -345,6 +354,11 @@ export const translations = {
     youAreThe: "Tu ești",
     playersCount: "Jucători",
     hostSettings: "Setări gazdă",
+    spectator: "Spectator",
+    spectatorTitle: "Ești Spectator",
+    spectatorSubtitle: "Ai fost eliminat. Privește jocul dar nu dezvălui nimic!",
+    hostImpostorGuessed: "Impostorul a ghicit",
+    hostImpostorGuessedDesc: "Încheie runda dacă impostorul ghicește cuvântul cu voce tare.",
   },
 }
 

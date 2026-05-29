@@ -3,6 +3,7 @@
 import { useGame } from "@/lib/game-context"
 import { useLanguage } from "@/lib/language-context"
 import { LanguageSelector } from "@/components/language-selector"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Copy, LogOut, ShieldAlert } from "lucide-react"
@@ -74,6 +75,7 @@ export function RoomHeader() {
             {statusLabel[room.status]}
           </Badge>
           <LanguageSelector />
+          <ThemeToggle />
           <Button
             variant="ghost"
             size="sm"

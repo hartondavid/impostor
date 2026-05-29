@@ -64,8 +64,9 @@ export function PlayerList({
                 <span
                   className={cn(
                     "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",
-                    p.connected ? "bg-primary" : "bg-muted-foreground/40",
+                    !p.connected && "bg-muted-foreground/40",
                   )}
+                  style={p.connected ? { backgroundColor: p.avatarColor } : undefined}
                   aria-label={p.connected ? "online" : "offline"}
                 />
               </div>

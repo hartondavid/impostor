@@ -19,8 +19,11 @@ export function VotingScreen() {
   const totalVotes = Object.keys(votes).length
   const totalPlayers = room.players.length
   
-  // Everyone but you
-  const eligibleTargets = room.players.filter(p => p.id !== viewerId)
+  const viewer = room.players.find(p => p.id === viewerId)
+  const isViewerSpectator = viewer?.isSpectator
+  
+  // Everyone but you, and not spectators
+  const eligibleTargets = room.players.filter(p => p.id !== viewerId && !p.isSpectator)
 
   return (
     <div className="min-h-screen">
@@ -48,11 +51,14 @@ export function VotingScreen() {
                 return (
                   <button
                     key={player.id}
-                    onClick={() => castVote(player.id)}
+                    onClick={() => !isViewerSpectator && castVote(player.id)}
+                    disabled={isViewerSpectator}
                     className={`flex items-center gap-4 rounded-xl border p-4 text-left transition-all ${
                       isSelected
                         ? "border-primary bg-primary/10 ring-1 ring-primary"
-                        : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
+                        : isViewerSpectator 
+                          ? "border-border bg-background opacity-50 cursor-not-allowed"
+                          : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
                     }`}
                   >
                     <div
