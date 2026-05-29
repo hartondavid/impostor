@@ -42,8 +42,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useInstallAppPrompt } from "@/hooks/use-install-app-prompt"
 import { GreenParticlesBackground } from "@/components/green-particles"
-import { AdBanner } from "@/components/ad-banner"
-
 const REVOLUT_SUPPORT_URL =
   process.env.NEXT_PUBLIC_REVOLUT_SUPPORT_URL ?? "https://revolut.me/david1498"
 
@@ -287,8 +285,6 @@ export function Landing() {
             </DialogContent>
           </Dialog>
         </div>
-
-        <AdBanner className="mt-12 w-full" />
 
         {/* How it works */}
         <div className="mt-24 w-full max-w-4xl">

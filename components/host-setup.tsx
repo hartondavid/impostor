@@ -21,8 +21,6 @@ import { DelegateHostCard } from "@/components/delegate-host"
 import { CATEGORIES_EN } from "@/lib/mock-data-en"
 import type { WordPack } from "@/lib/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AdBanner } from "@/components/ad-banner"
-
 // Host-only screen for choosing the secret word/category.
 // Guesser (Impostor) selection is now automatic and secret upon starting the round.
 export function HostSetup() {
@@ -133,8 +131,6 @@ export function HostSetup() {
               </Button>
             </div>
           </div>
-
-          <AdBanner />
 
           {/* Word selection panel */}
           <div className="rounded-2xl border border-border bg-card p-6 space-y-4">

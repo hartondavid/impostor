@@ -6,8 +6,6 @@ import { RoomHeader } from "@/components/room-header"
 import { GameStatusBanner } from "@/components/game-status-banner"
 import { Button } from "@/components/ui/button"
 import { ShieldAlert, CheckCircle2, User } from "lucide-react"
-import { AdBanner } from "@/components/ad-banner"
-
 export function VotingScreen() {
   const { room, viewerId, castVote, revealResult, viewAs } = useGame()
   const { t } = useLanguage()
@@ -36,8 +34,6 @@ export function VotingScreen() {
             title={t("votingTitle")}
             subtitle={t("votingSubtitle")}
           />
-
-          <AdBanner />
 
           <div className="rounded-2xl border border-border bg-card p-6">
             <div className="flex items-center justify-between mb-6">

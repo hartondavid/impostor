@@ -9,8 +9,6 @@ import { Spinner } from "@/components/ui/spinner"
 import { Play } from "lucide-react"
 import { toast } from "sonner"
 import { DelegateHostCard } from "@/components/delegate-host"
-import { AdBanner } from "@/components/ad-banner"
-
 export function Lobby() {
   const { room, viewerId, setScreen } = useGame()
   const { t } = useLanguage()
@@ -89,7 +87,6 @@ export function Lobby() {
             players={room.players}
             viewerId={viewerId}
           />
-          <AdBanner variant="compact" className="opacity-90" />
           {isViewerHost && (
             <div className="pt-4">
               <DelegateHostCard />

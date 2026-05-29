@@ -9,8 +9,6 @@ import { ShieldAlert, FastForward, Lock, Eye, Ghost } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DelegateHostCard } from "@/components/delegate-host"
 import { SpokenWordsLog } from "@/components/spoken-words-log"
-import { AdBanner } from "@/components/ad-banner"
-
 // Regular player's dashboard. Sees:
 // - the secret word
 // - the category
@@ -157,7 +155,6 @@ export function PlayerView() {
           {t("room")}
         </h2>
         <PlayerList players={room.players} viewerId={viewerId} hideGuesserBadge={true} />
-        <AdBanner variant="compact" className="opacity-90" />
         {isHostPlayer && (
           <div className="pt-4">
             <DelegateHostCard />

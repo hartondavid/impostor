@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button"
 import { RoomHeader } from "@/components/room-header"
 import { PlayerList } from "@/components/player-list"
 import { ShieldAlert, RotateCcw, Trophy } from "lucide-react"
-import { AdBanner } from "@/components/ad-banner"
-
 export function ResultsScreen() {
   const { room, newRound, viewerId } = useGame()
   const { t } = useLanguage()
@@ -103,8 +101,6 @@ export function ResultsScreen() {
               )}
             </div>
           </div>
-
-          <AdBanner />
 
         </section>
 
